@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: backend
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi[all]>=0.117.1
+Requires-Dist: langchain>=0.3.27
+Requires-Dist: langchain-openai>=0.3.33
+Requires-Dist: psycopg2-binary>=2.9.10
+Requires-Dist: python-dotenv>=1.1.1
+Requires-Dist: sqlalchemy>=2.0.43
+Requires-Dist: uvicorn>=0.37.0
+Dynamic: requires-python
