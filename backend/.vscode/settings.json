@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "/home/tejast/Documents/Projects/rushiGo/backend/.venv/bin/python",
+  "python.pythonPath": "/home/tejast/Documents/Projects/rushiGo/backend/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "/home/tejast/Documents/Projects/rushiGo/backend/.venv/lib/python3.13/site-packages",
+    "/home/tejast/Documents/Projects/rushiGo/backend/.venv/lib64/python3.13/site-packages"
+  ]
+}
