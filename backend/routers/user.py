@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm
-import bcrypt
+from passlib.context import CryptContext
 from datetime import timedelta
+
+# Use pbkdf2_sha256 instead of bcrypt to avoid 72-byte password limitation
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 from db.database import get_db
 from models.user import User
@@ -31,13 +34,14 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             detail="Username already taken"
         )
     
-    # Hash password
-    hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
+
+    # Hash the password
+    hashed_password = pwd_context.hash(user.password)
     
     db_user = User(
         email=user.email,
         username=user.username,
-        hashed_password=hashed_password.decode('utf-8')
+        hashed_password=hashed_password
     )
     db.add(db_user)
     db.commit()
@@ -47,7 +51,8 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not bcrypt.checkpw(form_data.password.encode('utf-8'), user.hashed_password.encode('utf-8')):
+    
+    if not user or not pwd_context.verify(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
@@ -85,7 +90,7 @@ async def update_user(
     
     for key, value in user_update.dict(exclude_unset=True).items():
         if key == "password" and value:
-            value = bcrypt.hashpw(value.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            value = pwd_context.hash(value)
             setattr(current_user, "hashed_password", value)
         else:
             setattr(current_user, key, value)
