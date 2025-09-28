@@ -60,3 +60,4 @@ logs/
 *.tempbackend/.env
 backend/.env
 backend/.env
+backend/.env
