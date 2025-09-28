@@ -18,3 +18,4 @@ class User(Base):
 
     # Relationships
     deadlines = relationship("Deadline", back_populates="user", cascade="all, delete-orphan")
+    memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")

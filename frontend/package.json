@@ -13,13 +13,18 @@
     "@radix-ui/react-accordion": "1.1.2",
     "@radix-ui/react-alert-dialog": "1.0.5",
     "@radix-ui/react-collapsible": "1.0.3",
+    "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-select": "1.2.2",
     "@types/node": "^20.11.25",
+    "class-variance-authority": "^0.7.1",
     "embla-carousel-react": "^8.0.0-rc22",
+    "framer-motion": "^12.23.22",
+    "lucide-react": "^0.544.0",
     "react": "^18.2.0",
     "react-day-picker": "^8.8.0",
     "react-dom": "^18.2.0",
-    "recharts": "^2.12.2"
+    "recharts": "^2.12.2",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

@@ -10,9 +10,10 @@ from models.user import User
 from schemas.deadline import DeadlineCreate, DeadlineResponse, DeadlineUpdate
 from auth.oauth2 import get_current_user
 from services.document_processor import DocumentProcessor
+from core.config import settings
 
-# Initialize document processor with API key
-document_processor = DocumentProcessor(os.getenv("OPENAI_API_KEY", ""))
+# Initialize document processor with Gemini API key
+document_processor = DocumentProcessor(settings.GEMINI_API_KEY)
 
 router = APIRouter(
     prefix="/deadlines",
@@ -28,13 +29,21 @@ async def create_deadline(
     current_user: User = Depends(get_current_user)
 ):
     # Create new deadline instance
-    new_deadline = Deadline(
-        title=request.title,
-        description=request.description,
-        date=request.date,
-        priority=request.priority,
-        user_id=current_user.id  # Associate deadline with current user
-    )
+    try:
+        new_deadline = Deadline(
+            title=request.title,
+            description=request.description,
+            date=request.date,
+            priority=request.priority,  # Enum will be converted to string automatically
+            estimated_hours=request.estimated_hours,
+            user_id=current_user.id  # Associate deadline with current user
+        )
+    except Exception as e:
+        print(f"Error creating deadline instance: {str(e)}")  # For debugging
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating deadline instance: {str(e)}"
+        )
     
     try:
         # Add to database session
@@ -47,9 +56,10 @@ async def create_deadline(
     except Exception as e:
         # Rollback on error
         db.rollback()
+        print(f"Error creating deadline: {str(e)}")  # For debugging
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create deadline"
+            detail=f"Failed to create deadline: {str(e)}"
         )
 
 @router.get("/", response_model=List[DeadlineResponse])
@@ -171,8 +181,47 @@ async def scan_document(
     Scan a document for deadlines and create them automatically using LLM
     """
     try:
+        # Validate file type
+        allowed_types = ["application/pdf", "text/plain", "text/csv", "application/msword", 
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+        
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file type: {file.content_type}. Supported types: PDF, TXT, CSV, DOC, DOCX"
+            )
+        
         content = await file.read()
-        text_content = content.decode()
+        
+        # Extract text based on file type
+        if file.content_type == "application/pdf":
+            text_content = document_processor.extract_text_from_pdf(content)
+        elif file.content_type in ["text/plain", "text/csv"]:
+            try:
+                text_content = content.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    text_content = content.decode('latin-1')
+                except UnicodeDecodeError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Cannot decode text file. Please ensure it's in UTF-8 or Latin-1 encoding."
+                    )
+        else:
+            # For other document types, try to decode as text (basic fallback)
+            try:
+                text_content = content.decode('utf-8')
+            except UnicodeDecodeError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Cannot process {file.content_type} files yet. Please convert to PDF or TXT format."
+                )
+        
+        if not text_content.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No text content found in the document"
+            )
         
         # Extract deadlines using LLM
         extracted_deadlines = await document_processor.extract_deadlines(text_content)

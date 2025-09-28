@@ -1,55 +1,65 @@
-import { useState, useEffect } from 'react';
-import { DeadlineCard } from './ui';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { RefreshCw, Filter, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { DeadlineCard } from "./DeadlineCard";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import {
+  RefreshCw,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { useDeadlines } from "../hooks/useDeadlines";
+import { Deadline } from "../services/api";
 
-interface Deadline {
-  id: number;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  priority: 'high' | 'medium' | 'low';
-  source: string;
-  status: 'pending' | 'completed' | 'deleted';
-}
+// Transform API deadline to component deadline
+const transformDeadline = (deadline: Deadline) => ({
+  id: deadline.id,
+  title: deadline.title,
+  description: deadline.description || "No description available",
+  date: deadline.date,
+  time: new Date(deadline.date).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }),
+  priority: deadline.priority,
+  source: "API",
+  status: deadline.completed ? ("completed" as const) : ("pending" as const),
+});
 
-interface RecentsSectionProps {
-  deadlines: Deadline[];
-  onUpdateDeadlines: (deadlines: Deadline[]) => void;
-}
-
-export function RecentsSection({ deadlines, onUpdateDeadlines }: RecentsSectionProps) {
+export function RecentsSection() {
+  const { deadlines, loading, error, toggleComplete, fetchDeadlines } =
+    useDeadlines();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
-  const [filteredDeadlines, setFilteredDeadlines] = useState<Deadline[]>([]);
+  const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
+  const [filteredDeadlines, setFilteredDeadlines] = useState<
+    ReturnType<typeof transformDeadline>[]
+  >([]);
 
   useEffect(() => {
-    const filtered = deadlines.filter(deadline => {
-      if (filter === 'all') return deadline.status !== 'deleted';
+    const transformed = deadlines.map(transformDeadline);
+    const filtered = transformed.filter((deadline) => {
+      if (filter === "all") return true;
       return deadline.status === filter;
     });
     setFilteredDeadlines(filtered);
     setCurrentIndex(0);
   }, [deadlines, filter]);
 
-  const handleSwipeLeft = (id: number) => {
-    // Keep as pending - remove from current view but keep in pending
-    const updatedDeadlines = deadlines.map(deadline =>
-      deadline.id === id ? { ...deadline, status: 'pending' as const } : deadline
-    );
-    onUpdateDeadlines(updatedDeadlines);
+  const handleSwipeLeft = async (_id: number) => {
+    // Keep as pending - just move to next card
     nextCard();
   };
 
-  const handleSwipeRight = (id: number) => {
-    // Mark as completed/read
-    const updatedDeadlines = deadlines.map(deadline =>
-      deadline.id === id ? { ...deadline, status: 'completed' as const } : deadline
-    );
-    onUpdateDeadlines(updatedDeadlines);
-    nextCard();
+  const handleSwipeRight = async (id: number) => {
+    // Mark as completed
+    try {
+      await toggleComplete(id);
+      nextCard();
+    } catch (err) {
+      console.error("Failed to toggle completion:", err);
+    }
   };
 
   const nextCard = () => {
@@ -63,8 +73,46 @@ export function RecentsSection({ deadlines, onUpdateDeadlines }: RecentsSectionP
   };
 
   const getFilteredCount = (status: string) => {
-    return deadlines.filter(d => d.status === status).length;
+    const transformed = deadlines.map(transformDeadline);
+    return transformed.filter((d) => d.status === status).length;
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-12">
+          <Loader2 className="h-16 w-16 text-purple-600 animate-spin mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Loading Deadlines...
+          </h2>
+          <p className="text-gray-600">
+            Fetching your deadlines from the server.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-12">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Error Loading Deadlines
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button
+            onClick={fetchDeadlines}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (filteredDeadlines.length === 0) {
     return (
@@ -72,17 +120,16 @@ export function RecentsSection({ deadlines, onUpdateDeadlines }: RecentsSectionP
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-12">
           <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {filter === 'all' ? 'No Deadlines Found' : `No ${filter} deadlines`}
+            {filter === "all" ? "No Deadlines Found" : `No ${filter} deadlines`}
           </h2>
           <p className="text-gray-600 mb-6">
-            {filter === 'all' 
-              ? 'Upload a document to get started with deadline tracking!'
-              : `You don't have any ${filter} deadlines at the moment.`
-            }
+            {filter === "all"
+              ? "Upload a document to get started with deadline tracking!"
+              : `You don't have any ${filter} deadlines at the moment.`}
           </p>
-          {filter !== 'all' && (
-            <Button 
-              onClick={() => setFilter('all')}
+          {filter !== "all" && (
+            <Button
+              onClick={() => setFilter("all")}
               variant="outline"
               className="border-purple-200 text-purple-600 hover:bg-purple-50"
             >
@@ -108,28 +155,40 @@ export function RecentsSection({ deadlines, onUpdateDeadlines }: RecentsSectionP
         {/* Filter buttons */}
         <div className="flex flex-wrap justify-center gap-3 mb-6">
           <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
-            onClick={() => setFilter('all')}
-            className={filter === 'all' ? 'bg-gradient-to-r from-purple-600 to-blue-600' : ''}
+            variant={filter === "all" ? "default" : "outline"}
+            onClick={() => setFilter("all")}
+            className={
+              filter === "all"
+                ? "bg-gradient-to-r from-purple-600 to-blue-600"
+                : ""
+            }
           >
             <Calendar className="h-4 w-4 mr-2" />
-            All ({deadlines.filter(d => d.status !== 'deleted').length})
+            All ({deadlines.length})
           </Button>
           <Button
-            variant={filter === 'pending' ? 'default' : 'outline'}
-            onClick={() => setFilter('pending')}
-            className={filter === 'pending' ? 'bg-gradient-to-r from-purple-600 to-blue-600' : ''}
+            variant={filter === "pending" ? "default" : "outline"}
+            onClick={() => setFilter("pending")}
+            className={
+              filter === "pending"
+                ? "bg-gradient-to-r from-purple-600 to-blue-600"
+                : ""
+            }
           >
             <Clock className="h-4 w-4 mr-2" />
-            Pending ({getFilteredCount('pending')})
+            Pending ({getFilteredCount("pending")})
           </Button>
           <Button
-            variant={filter === 'completed' ? 'default' : 'outline'}
-            onClick={() => setFilter('completed')}
-            className={filter === 'completed' ? 'bg-gradient-to-r from-purple-600 to-blue-600' : ''}
+            variant={filter === "completed" ? "default" : "outline"}
+            onClick={() => setFilter("completed")}
+            className={
+              filter === "completed"
+                ? "bg-gradient-to-r from-purple-600 to-blue-600"
+                : ""
+            }
           >
             <CheckCircle className="h-4 w-4 mr-2" />
-            Completed ({getFilteredCount('completed')})
+            Completed ({getFilteredCount("completed")})
           </Button>
         </div>
       </div>
@@ -139,12 +198,12 @@ export function RecentsSection({ deadlines, onUpdateDeadlines }: RecentsSectionP
         <div className="absolute inset-0 flex items-center justify-center">
           {filteredDeadlines.map((deadline, index) => {
             if (index < currentIndex) return null;
-            
+
             const isActive = index === currentIndex;
             const zIndex = filteredDeadlines.length - index;
             const scale = isActive ? 1 : 0.95 - (index - currentIndex) * 0.05;
             const yOffset = (index - currentIndex) * 10;
-            
+
             return (
               <DeadlineCard
                 key={deadline.id}
@@ -152,10 +211,10 @@ export function RecentsSection({ deadlines, onUpdateDeadlines }: RecentsSectionP
                 onSwipeLeft={handleSwipeLeft}
                 onSwipeRight={handleSwipeRight}
                 style={{
-                  position: 'absolute',
+                  position: "absolute",
                   zIndex,
                   transform: `scale(${scale}) translateY(${yOffset}px)`,
-                  pointerEvents: isActive ? 'auto' : 'none',
+                  pointerEvents: isActive ? "auto" : "none",
                 }}
               />
             );
@@ -189,7 +248,8 @@ export function RecentsSection({ deadlines, onUpdateDeadlines }: RecentsSectionP
               All caught up!
             </h3>
             <p className="text-gray-600">
-              You've reviewed all {filter} deadlines. Great job staying organized!
+              You've reviewed all {filter} deadlines. Great job staying
+              organized!
             </p>
           </div>
         )}

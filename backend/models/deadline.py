@@ -10,10 +10,13 @@ class Deadline(Base):
     title = Column(String, index=True, nullable=False)
     description = Column(String, nullable=True)
     date = Column(DateTime(timezone=True), nullable=False)
-    priority = Column(String, index=True, nullable=False, default="medium")  # low, medium, high
+    priority = Column(String(10), index=True, nullable=False, default="medium")  # low, medium, high
+    estimated_hours = Column(Integer, nullable=True, default=0)
     completed = Column(Boolean, nullable=False, default=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)  # Optional team assignment
     user = relationship("User", back_populates="deadlines")
+    team = relationship("Team", back_populates="deadlines")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

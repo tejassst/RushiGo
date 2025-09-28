@@ -3,20 +3,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
-from routers import user, deadline
+from routers import user, deadline, team
 from db.database import Base, engine
-from models import User, Deadline  # Add this import
+from models import User, Deadline, Team, Membership  # Add this import
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables
+# Reset and recreate database tables
 try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
+    from db.database import reset_database
+    reset_database()
+    logger.info("Database tables reset and recreated successfully")
 except Exception as e:
-    logger.error(f"Error creating database tables: {str(e)}")
+    logger.error(f"Error resetting database tables: {str(e)}")
     raise
 
 from fastapi import FastAPI, Request
@@ -24,7 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from db.database import create_tables
-from routers import user, deadline
+from routers import user, deadline, team
 from core.config import settings
 
 # Create FastAPI app
@@ -45,6 +46,7 @@ app.add_middleware(
 
 app.include_router(user.router, prefix=settings.API_PREFIX)
 app.include_router(deadline.router, prefix=settings.API_PREFIX)
+app.include_router(team.router, prefix=settings.API_PREFIX)
 
 if __name__ == "__main__":
     import uvicorn

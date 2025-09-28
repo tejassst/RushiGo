@@ -1,131 +1,99 @@
-import { useState } from 'react';
+import { useState } from "react";
+import {
+  AnimatedBackground,
+  Header,
+  HomePage,
+  UploadSection,
+  RecentsSection,
+  DemoSection,
+  TeamSection,
+} from "./components";
+import { AuthModal } from "./components/AuthModal";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import "./index.css";
+import "./App.css";
 
-import { AnimatedBackground, Header, HomePage, UploadSection, RecentsSection, DemoSection, TeamSection, AuthDialog } from "./components";
-import './index.css';
-import './App.css';
-
-interface Deadline {
-  id: number;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  priority: 'high' | 'medium' | 'low';
-  source: string;
-  status: 'pending' | 'completed' | 'deleted';
-}
-
-export default function App() {
-  const [activeSection, setActiveSection] = useState<'home' | 'upload' | 'recents' | 'demo' | 'team'>('home');
-  const [authDialog, setAuthDialog] = useState<{ isOpen: boolean; mode: 'login' | 'signup' }>({
+function AppContent() {
+  const [activeSection, setActiveSection] = useState<
+    "home" | "upload" | "recents" | "demo" | "team"
+  >("home");
+  const [authModal, setAuthModal] = useState<{
+    isOpen: boolean;
+    mode: "login" | "signup";
+  }>({
     isOpen: false,
-    mode: 'login'
+    mode: "login",
   });
-  
-  const [deadlines, setDeadlines] = useState<Deadline[]>([
-    // Sample data for demonstration
-    {
-      id: 1,
-      title: "Math Assignment Due",
-      description: "Complete chapters 5-7 exercises and submit online",
-      date: "2024-10-12",
-      time: "11:59 PM",
-      priority: "high",
-      source: "syllabus.pdf",
-      status: "pending"
-    },
-    {
-      id: 2,
-      title: "Project Presentation",
-      description: "Present final project to the class",
-      date: "2024-10-18",
-      time: "2:00 PM",
-      priority: "medium",
-      source: "schedule.jpg",
-      status: "pending"
-    },
-    {
-      id: 3,
-      title: "Lab Report Submission",
-      description: "Submit completed lab report for chemistry",
-      date: "2024-10-20",
-      time: "5:00 PM",
-      priority: "low",
-      source: "lab_instructions.pdf",
-      status: "completed"
+
+  const { isAuthenticated, logout } = useAuth();
+
+  const handleNavigate = (
+    section: "home" | "upload" | "recents" | "demo" | "team"
+  ) => {
+    // Redirect to login if trying to access protected sections while not authenticated
+    if (
+      !isAuthenticated &&
+      (section === "recents" || section === "upload" || section === "team")
+    ) {
+      setAuthModal({ isOpen: true, mode: "login" });
+      return;
     }
-  ]);
-
-  const handleUploadComplete = (newDeadlines: Deadline[]) => {
-    setDeadlines(prev => [...prev, ...newDeadlines]);
-    setActiveSection('recents');
-  };
-
-  const handleUpdateDeadlines = (updatedDeadlines: Deadline[]) => {
-    setDeadlines(updatedDeadlines);
-  };
-
-  const handleNavigate = (section: 'home' | 'upload' | 'recents' | 'demo' | 'team') => {
     setActiveSection(section);
   };
 
-  const openAuth = (mode: 'login' | 'signup') => {
-    setAuthDialog({ isOpen: true, mode });
+  const openAuth = (mode: "login" | "signup") => {
+    setAuthModal({ isOpen: true, mode });
   };
 
   const closeAuth = () => {
-    setAuthDialog({ isOpen: false, mode: 'login' });
+    setAuthModal({ isOpen: false, mode: "login" });
   };
 
-  const switchAuthMode = () => {
-    setAuthDialog(prev => ({
-      ...prev,
-      mode: prev.mode === 'login' ? 'signup' : 'login'
-    }));
+  const switchAuthMode = (mode: "login" | "signup") => {
+    setAuthModal((prev) => ({ ...prev, mode }));
   };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden">
       <AnimatedBackground />
-      
-      <Header 
+
+      <Header
         onNavigate={handleNavigate}
         activeSection={activeSection}
-        onLogin={() => openAuth('login')}
-        onSignUp={() => openAuth('signup')}
+        onLogin={() => openAuth("login")}
+        onSignUp={() => openAuth("signup")}
+        onLogout={logout}
+        isAuthenticated={isAuthenticated}
       />
-      
-      <main className="relative z-10">
-        {activeSection === 'home' && (
-          <HomePage onNavigate={handleNavigate} />
-        )}
-        
-        {activeSection === 'demo' && (
+
+      <main className="relative z-10 w-full">
+        {activeSection === "home" && <HomePage onNavigate={handleNavigate} />}
+
+        {activeSection === "demo" && (
           <DemoSection onNavigate={handleNavigate} />
         )}
-        
-        {activeSection === 'upload' && (
-          <UploadSection onUploadComplete={handleUploadComplete} />
-        )}
-        
-        {activeSection === 'recents' && (
-          <RecentsSection 
-            deadlines={deadlines}
-            onUpdateDeadlines={handleUpdateDeadlines}
-          />
-        )}
-        
-        {activeSection === 'team' && (
-          <TeamSection />
-        )}
+
+        {activeSection === "upload" && isAuthenticated && <UploadSection />}
+
+        {activeSection === "recents" && isAuthenticated && <RecentsSection />}
+
+        {activeSection === "team" && isAuthenticated && <TeamSection />}
       </main>
 
-      <AuthDialog
-        isOpen={authDialog.isOpen}
+      <AuthModal
+        isOpen={authModal.isOpen}
         onClose={closeAuth}
-        mode={authDialog.mode}
-        onSwitchMode={switchAuthMode}
+        mode={authModal.mode}
+        onModeChange={switchAuthMode}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
