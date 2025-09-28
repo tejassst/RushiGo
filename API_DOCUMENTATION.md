@@ -15,11 +15,13 @@
 Manually trigger the deadline notification system to check all users and send appropriate reminders.
 
 **Request:**
+
 ```bash
 curl -X POST "http://localhost:8000/api/notifications/send-deadline-notifications"
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Notification check completed",
@@ -32,11 +34,13 @@ curl -X POST "http://localhost:8000/api/notifications/send-deadline-notification
 ```
 
 **Response Fields:**
+
 - `approaching_sent`: Number of approaching deadline notifications sent
-- `overdue_sent`: Number of overdue deadline notifications sent  
+- `overdue_sent`: Number of overdue deadline notifications sent
 - `errors`: Number of failed notification attempts
 
 **Use Cases:**
+
 - Manual testing of notification system
 - Immediate notification trigger after deadline creation
 - System maintenance and verification
@@ -50,14 +54,17 @@ curl -X POST "http://localhost:8000/api/notifications/send-deadline-notification
 Send a test notification to a specific user using their first active deadline.
 
 **Parameters:**
+
 - `user_id` (integer, required): Target user ID
 
 **Request:**
+
 ```bash
 curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Test notification sent to user@example.com"
@@ -67,6 +74,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
 **Error Responses:**
 
 **404 Not Found - User not found:**
+
 ```json
 {
   "detail": "User not found"
@@ -74,6 +82,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
 ```
 
 **404 Not Found - No deadlines:**
+
 ```json
 {
   "detail": "No active deadlines found for user"
@@ -81,6 +90,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
 ```
 
 **500 Internal Server Error:**
+
 ```json
 {
   "detail": "Failed to send test notification"
@@ -88,6 +98,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
 ```
 
 **Use Cases:**
+
 - Testing email delivery for specific users
 - Verifying user notification preferences
 - Debugging notification issues
@@ -101,14 +112,17 @@ curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
 Send a daily digest email to a specific user containing upcoming and overdue deadlines.
 
 **Parameters:**
+
 - `user_id` (integer, required): Target user ID
 
 **Request:**
+
 ```bash
 curl -X POST "http://localhost:8000/api/notifications/send-daily-digest/123"
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Daily digest sent to user 123"
@@ -116,6 +130,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-daily-digest/123"
 ```
 
 **Response (200 OK - No deadlines):**
+
 ```json
 {
   "message": "Daily digest sent to user 123"
@@ -125,6 +140,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-daily-digest/123"
 **Error Responses:**
 
 **404 Not Found:**
+
 ```json
 {
   "detail": "User not found or no deadlines"
@@ -132,6 +148,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-daily-digest/123"
 ```
 
 **500 Internal Server Error:**
+
 ```json
 {
   "detail": "Failed to send daily digest"
@@ -139,6 +156,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-daily-digest/123"
 ```
 
 **Digest Content:**
+
 - Upcoming deadlines (next 7 days)
 - Overdue deadlines
 - Summary statistics
@@ -153,11 +171,13 @@ curl -X POST "http://localhost:8000/api/notifications/send-daily-digest/123"
 Retrieve notification system statistics and performance metrics.
 
 **Request:**
+
 ```bash
 curl -X GET "http://localhost:8000/api/notifications/statistics"
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "total_notifications": 1247,
@@ -169,6 +189,7 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ```
 
 **Response Fields:**
+
 - `total_notifications`: Total notification attempts
 - `sent_notifications`: Successfully sent notifications
 - `failed_notifications`: Failed notification attempts
@@ -176,6 +197,7 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 - `last_check`: Timestamp of last system check
 
 **Use Cases:**
+
 - System health monitoring
 - Performance analytics
 - Debugging notification issues
@@ -185,26 +207,29 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 
 ## 🎯 Response Codes
 
-| Code | Status | Description |
-|------|--------|-------------|
-| **200** | OK | Request successful |
-| **400** | Bad Request | Invalid request parameters |
-| **404** | Not Found | Resource not found (user, deadline) |
-| **500** | Internal Server Error | Server-side error |
+| Code    | Status                | Description                         |
+| ------- | --------------------- | ----------------------------------- |
+| **200** | OK                    | Request successful                  |
+| **400** | Bad Request           | Invalid request parameters          |
+| **404** | Not Found             | Resource not found (user, deadline) |
+| **500** | Internal Server Error | Server-side error                   |
 
 ## 📧 Email Notification Types
 
 ### **Approaching Deadline**
+
 **Trigger:** 3 days, 1 day, or same-day before deadline  
 **Subject:** `⏰ Deadline Reminder: [Deadline Title]`  
 **Content:** Personalized reminder with deadline details and countdown
 
 ### **Overdue Deadline**
+
 **Trigger:** After deadline passes  
 **Subject:** `⚠️ Overdue: [Deadline Title]`  
 **Content:** Urgent notification with days overdue count
 
 ### **Daily Digest**
+
 **Trigger:** Manual or scheduled (8 AM daily)  
 **Subject:** `📊 Daily Deadline Digest - [Date]`  
 **Content:** Summary of upcoming (7 days) and overdue deadlines
@@ -213,15 +238,16 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 
 The notification system runs automatically with these schedules:
 
-| Task | Frequency | Time | Description |
-|------|-----------|------|-------------|
-| **Deadline Check** | Hourly | :00 minutes | Check and send deadline reminders |
-| **Daily Digest** | Daily | 8:00 AM | Send digest to all active users |
-| **System Cleanup** | Daily | 2:00 AM | Archive old notifications |
+| Task               | Frequency | Time        | Description                       |
+| ------------------ | --------- | ----------- | --------------------------------- |
+| **Deadline Check** | Hourly    | :00 minutes | Check and send deadline reminders |
+| **Daily Digest**   | Daily     | 8:00 AM     | Send digest to all active users   |
+| **System Cleanup** | Daily     | 2:00 AM     | Archive old notifications         |
 
 ## 🧪 Testing Workflow
 
 ### **Basic Email Test**
+
 ```bash
 # 1. Test Mailgun connection
 python scripts/simple_mailgun_test.py
@@ -234,6 +260,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
 ```
 
 ### **Full System Test**
+
 ```bash
 # 1. Create test user and deadline
 # 2. Manual trigger
@@ -246,6 +273,7 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ## 🔧 Configuration
 
 ### **Required Environment Variables**
+
 ```bash
 MAILGUN_DOMAIN=sandbox920c0c8a6b6d49f493bc00545ef37db7.mailgun.org
 MAILGUN_API_KEY=your-private-api-key
@@ -254,7 +282,9 @@ DATABASE_URL=postgresql://user:pass@host:port/database
 ```
 
 ### **Email Template Customization**
+
 Templates are defined in `services/email_templates.py`:
+
 - `deadline_approaching_html()` - HTML version of deadline reminder
 - `deadline_approaching_text()` - Text version of deadline reminder
 - `deadline_overdue_text()` - Overdue deadline notification
@@ -263,6 +293,7 @@ Templates are defined in `services/email_templates.py`:
 ## 📊 Database Schema
 
 ### **Notifications Table**
+
 ```sql
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
@@ -274,20 +305,21 @@ CREATE TABLE notifications (
 ```
 
 ### **Query Examples**
+
 ```sql
 -- Recent notifications
-SELECT * FROM notifications 
-WHERE created_at >= NOW() - INTERVAL '24 hours' 
+SELECT * FROM notifications
+WHERE created_at >= NOW() - INTERVAL '24 hours'
 ORDER BY created_at DESC;
 
 -- User notification history
-SELECT * FROM notifications 
-WHERE user_id = 123 
-ORDER BY created_at DESC 
+SELECT * FROM notifications
+WHERE user_id = 123
+ORDER BY created_at DESC
 LIMIT 10;
 
 -- Success rate calculation
-SELECT 
+SELECT
     COUNT(*) as total,
     SUM(CASE WHEN sent THEN 1 ELSE 0 END) as sent,
     ROUND(
@@ -299,6 +331,7 @@ FROM notifications;
 ## 🚨 Error Handling
 
 ### **API Error Response Format**
+
 ```json
 {
   "detail": "Error description",
@@ -309,27 +342,30 @@ FROM notifications;
 
 ### **Common Error Scenarios**
 
-| Scenario | Status Code | Response |
-|----------|-------------|----------|
-| User not found | 404 | `"User not found"` |
-| No deadlines | 404 | `"No active deadlines found for user"` |
-| Email send failure | 500 | `"Failed to send notification"` |
-| Database error | 500 | `"Database connection error"` |
-| Invalid user ID | 400 | `"Invalid user ID format"` |
+| Scenario           | Status Code | Response                               |
+| ------------------ | ----------- | -------------------------------------- |
+| User not found     | 404         | `"User not found"`                     |
+| No deadlines       | 404         | `"No active deadlines found for user"` |
+| Email send failure | 500         | `"Failed to send notification"`        |
+| Database error     | 500         | `"Database connection error"`          |
+| Invalid user ID    | 400         | `"Invalid user ID format"`             |
 
 ## 🔐 Security Considerations
 
 ### **Rate Limiting**
+
 - API endpoints are not rate-limited (development)
 - Production should implement rate limiting
 - Consider user-specific limits for test notifications
 
 ### **Data Privacy**
+
 - Email addresses are not exposed in API responses
 - Notification content does not include sensitive data
 - Database logs are retained for debugging only
 
 ### **Authentication**
+
 - Current implementation has no authentication (development)
 - Production should implement proper API authentication
 - Consider role-based access for admin endpoints
@@ -337,6 +373,7 @@ FROM notifications;
 ## 📈 Performance Metrics
 
 ### **Recommended Monitoring**
+
 ```bash
 # Success rate (should be > 95%)
 curl -X GET "http://localhost:8000/api/notifications/statistics" | jq '.success_rate'
@@ -349,6 +386,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-deadline-notification
 ```
 
 ### **Performance Benchmarks**
+
 - **Response time**: < 2 seconds for notification triggers
 - **Email delivery**: < 5 minutes via Mailgun
 - **System throughput**: 100+ notifications per minute
@@ -359,6 +397,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-deadline-notification
 ## 🆘 Support & Troubleshooting
 
 ### **Quick Diagnostics**
+
 ```bash
 # Test Mailgun connectivity
 python scripts/simple_mailgun_test.py
@@ -371,6 +410,7 @@ python scripts/test_connection.py
 ```
 
 ### **Common Issues**
+
 1. **401 Unauthorized**: Check MAILGUN_API_KEY
 2. **400 Bad Request**: Verify authorized recipients in Mailgun
 3. **500 Server Error**: Check database connection and logs
