@@ -1,32 +1,25 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 from core.config import settings
 from routers import user, deadline, team
-from db.database import Base, engine
-from models import User, Deadline, Team, Membership  # Add this import
+from db.database import create_tables
+from models import User, Deadline, Team, Membership, Notification  # Ensure models are imported
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Reset and recreate database tables
+# Ensure database tables exist (create if they don't exist)
 try:
-    from db.database import reset_database
-    reset_database()
-    logger.info("Database tables reset and recreated successfully")
+    create_tables()
+    logger.info("Database tables ensured/created successfully")
 except Exception as e:
-    logger.error(f"Error resetting database tables: {str(e)}")
+    logger.error(f"Error ensuring database tables: {str(e)}")
     raise
-
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from db.database import create_tables
-from routers import user, deadline, team
-from core.config import settings
 
 # Create FastAPI app
 app = FastAPI(

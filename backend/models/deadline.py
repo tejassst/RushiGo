@@ -7,9 +7,9 @@ from db.database import Base
 class Deadline(Base):
     __tablename__="deadlines"
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True, nullable=False)
-    description = Column(String, nullable=True)
-    course = Column(String, index=True, nullable=True)  # Course/Subject name
+    title = Column(String(255), index=True, nullable=False)
+    description = Column(String(1000), nullable=True)
+    course = Column(String(100), index=True, nullable=True)  # Course/Subject name
     date = Column(DateTime(timezone=True), nullable=False)
     priority = Column(String(10), index=True, nullable=False, default="medium")  # low, medium, high
     estimated_hours = Column(Integer, nullable=True, default=0)

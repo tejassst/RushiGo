@@ -10,12 +10,26 @@ class Settings(BaseSettings):
     DATABASE_URL: Annotated[str, Field(description="Database connection URL", validate_default=True)] = Field(default="")
     ALLOWED_ORIGINS: str = Field(default="")
     GEMINI_API_KEY: Annotated[str, Field(description="Gemini API Key", validate_default=True)] = Field(default="")
+    
+    # Supabase configuration
+    SUPABASE_URL: str = Field(default="")
+    SUPABASE_ANON_KEY: str = Field(default="")
+    
+    # Email configuration (Mailgun)
+    MAILGUN_DOMAIN: str = Field(default="")
+    MAILGUN_API_KEY: str = Field(default="")
+    FROM_EMAIL: str = Field(default="")
 
     @field_validator("DATABASE_URL", "GEMINI_API_KEY")
     def validate_required_fields(cls, value: str) -> str:
         if not value or value.strip() == "":
             raise ValueError(f"This field must be provided in environment variables")
         return value
+    
+    @property
+    def is_postgresql(self) -> bool:
+        """Check if using PostgreSQL database"""
+        return self.DATABASE_URL.startswith("postgresql://") or self.DATABASE_URL.startswith("postgres://")
 
     @field_validator("ALLOWED_ORIGINS")
     def parse_allowed_origins(cls, value: str) -> List[str]:
