@@ -5,9 +5,10 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 
 from core.config import settings
-from routers import user, deadline, team
+from routers import user, deadline, team, notifications
 from db.database import create_tables
 from models import User, Deadline, Team, Membership, Notification  # Ensure models are imported
+from services.scheduler import start_scheduler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +41,20 @@ app.add_middleware(
 app.include_router(user.router, prefix=settings.API_PREFIX)
 app.include_router(deadline.router, prefix=settings.API_PREFIX)
 app.include_router(team.router, prefix=settings.API_PREFIX)
+app.include_router(notifications.router, prefix=settings.API_PREFIX)
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background services when the app starts"""
+    start_scheduler()
+    logger.info("Background notification scheduler started")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop background services when the app shuts down"""
+    from services.scheduler import stop_scheduler
+    stop_scheduler()
+    logger.info("Background notification scheduler stopped")
 
 if __name__ == "__main__":
     import uvicorn
