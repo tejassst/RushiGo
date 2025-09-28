@@ -7,6 +7,8 @@ import os
 from db.database import get_db
 from models.deadline import Deadline
 from models.user import User
+from models.team import Team
+from models.membership import Membership
 from schemas.deadline import DeadlineCreate, DeadlineResponse, DeadlineUpdate
 from auth.oauth2 import get_current_user
 from services.document_processor import DocumentProcessor
@@ -33,6 +35,7 @@ async def create_deadline(
         new_deadline = Deadline(
             title=request.title,
             description=request.description,
+            course=request.course,
             date=request.date,
             priority=request.priority,  # Enum will be converted to string automatically
             estimated_hours=request.estimated_hours,
@@ -238,6 +241,7 @@ async def scan_document(
             deadline = Deadline(
                 title=extracted.title,
                 description=extracted.description,
+                course=extracted.course,
                 date=extracted.date,
                 priority=extracted.priority,
                 user_id=current_user.id
@@ -262,3 +266,89 @@ async def scan_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error processing document: {str(e)}"
         )
+
+@router.post("/{deadline_id}/assign-team/{team_id}", response_model=DeadlineResponse)
+async def assign_deadline_to_team(
+    deadline_id: int,
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Assign a deadline to a team for sharing
+    """
+    # Get the deadline and check ownership
+    deadline = db.query(Deadline).filter(
+        Deadline.id == deadline_id,
+        Deadline.user_id == current_user.id
+    ).first()
+    
+    if not deadline:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Deadline with id {deadline_id} not found"
+        )
+    
+    # Check if user is a member of the team
+    membership = db.query(Membership).filter(
+        Membership.team_id == team_id,
+        Membership.user_id == current_user.id
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this team"
+        )
+    
+    # Check if team exists
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    
+    # Assign deadline to team
+    deadline.team_id = team_id
+    
+    try:
+        db.commit()
+        db.refresh(deadline)
+        return deadline
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to assign deadline to team"
+        )
+
+@router.get("/team/{team_id}", response_model=List[DeadlineResponse])
+async def get_team_deadlines(
+    team_id: int,
+    skip: int = 0,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all deadlines assigned to a team
+    """
+    # Check if user is a member of the team
+    membership = db.query(Membership).filter(
+        Membership.team_id == team_id,
+        Membership.user_id == current_user.id
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this team"
+        )
+    
+    # Get team deadlines
+    deadlines = db.query(Deadline).filter(
+        Deadline.team_id == team_id
+    ).offset(skip).limit(limit).all()
+    
+    return deadlines

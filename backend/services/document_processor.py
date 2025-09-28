@@ -10,6 +10,7 @@ from PyPDF2 import PdfReader
 class ExtractedDeadline(BaseModel):
     title: str
     description: str
+    course: str = None
     date: datetime
     priority: str
 
@@ -42,16 +43,18 @@ class DocumentProcessor:
         Analyze the following text and extract all deadlines and tasks. For each one, provide:
         1. A clear title
         2. Detailed description
-        3. Due date (format as ISO datetime: YYYY-MM-DDTHH:MM:SS)
-        4. Priority level (high/medium/low) based on urgency and importance
+        3. Course/subject name (if identifiable from context, otherwise "General")
+        4. Due date (format as ISO datetime: YYYY-MM-DDTHH:MM:SS)
+        5. Priority level (high/medium/low) based on urgency and importance
         
-        Return ONLY a JSON array with fields: title, description, date, priority
+        Return ONLY a JSON array with fields: title, description, course, date, priority
         
         Example format:
         [
             {{
                 "title": "Submit Project Report",
                 "description": "Final project report submission for CS101",
+                "course": "Computer Science 101",
                 "date": "2025-10-15T23:59:00",
                 "priority": "high"
             }}
@@ -96,6 +99,7 @@ class DocumentProcessor:
                     extracted.append(ExtractedDeadline(
                         title=data['title'],
                         description=data['description'],
+                        course=data.get('course', 'General'),
                         date=date,
                         priority=data['priority'].lower()
                     ))

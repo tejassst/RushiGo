@@ -12,17 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import {
-  Plus,
-  Users,
-  Calendar,
-  Target,
-  Loader,
-  UserPlus,
-  Mail,
-  Crown,
-  Shield,
-} from "lucide-react";
+import { Plus, Users, Calendar, Target, Loader } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   apiClient,
@@ -30,8 +20,6 @@ import {
   Deadline,
   CreateTeamRequest,
   CreateDeadlineRequest,
-  TeamMember,
-  InviteMemberRequest,
 } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -47,23 +35,16 @@ interface NewDeadlineForm {
   priority: "high" | "medium" | "low";
 }
 
-interface InviteMemberForm {
-  user_email: string;
-  role: "admin" | "member" | "viewer";
-}
-
-export function TeamSection() {
+export function SimpleTeamSection() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teamDeadlines, setTeamDeadlines] = useState<Deadline[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showAddDeadline, setShowAddDeadline] = useState(false);
-  const [showInviteMember, setShowInviteMember] = useState(false);
   const [deadlineFilter, setDeadlineFilter] = useState<
     "all" | "pending" | "completed"
   >("all");
@@ -80,14 +61,9 @@ export function TeamSection() {
     priority: "medium",
   });
 
-  const [inviteMember, setInviteMember] = useState<InviteMemberForm>({
-    user_email: "",
-    role: "member",
-  });
-
-  // Load team data on component mount
+  // Load teams on component mount
   useEffect(() => {
-    const loadTeamData = async () => {
+    const loadTeams = async () => {
       try {
         setLoading(true);
         const userTeams = await apiClient.getTeams();
@@ -97,18 +73,17 @@ export function TeamSection() {
           const firstTeam = userTeams[0];
           setSelectedTeam(firstTeam);
           await loadTeamDeadlines(firstTeam.id);
-          await loadTeamMembers(firstTeam.id);
         }
       } catch (err) {
-        setError("Failed to load team data");
-        console.error("Error loading team data:", err);
+        setError("Failed to load teams");
+        console.error("Error loading teams:", err);
       } finally {
         setLoading(false);
       }
     };
 
     if (user) {
-      loadTeamData();
+      loadTeams();
     }
   }, [user]);
 
@@ -118,15 +93,6 @@ export function TeamSection() {
       setTeamDeadlines(deadlines);
     } catch (err) {
       console.error("Error loading team deadlines:", err);
-    }
-  };
-
-  const loadTeamMembers = async (teamId: number) => {
-    try {
-      const members = await apiClient.getTeamMembers(teamId);
-      setTeamMembers(members);
-    } catch (err) {
-      console.error("Error loading team members:", err);
     }
   };
 
@@ -178,10 +144,7 @@ export function TeamSection() {
         );
 
         // Reload team deadlines
-        const updatedDeadlines = await apiClient.getTeamDeadlines(
-          selectedTeam.id
-        );
-        setTeamDeadlines(updatedDeadlines);
+        await loadTeamDeadlines(selectedTeam.id);
 
         setNewDeadline({
           title: "",
@@ -196,39 +159,6 @@ export function TeamSection() {
         );
       } catch (err) {
         alert("Failed to add deadline: " + (err as Error).message);
-      }
-    }
-  };
-
-  const inviteTeamMember = async () => {
-    if (!selectedTeam) {
-      alert("No team selected!");
-      return;
-    }
-
-    if (inviteMember.user_email.trim()) {
-      try {
-        const inviteData: InviteMemberRequest = {
-          user_email: inviteMember.user_email,
-          role: inviteMember.role,
-        };
-
-        await apiClient.inviteTeamMember(selectedTeam.id, inviteData);
-
-        // Reload team members
-        await loadTeamMembers(selectedTeam.id);
-
-        setInviteMember({
-          user_email: "",
-          role: "member",
-        });
-        setShowInviteMember(false);
-
-        console.log(
-          `✅ User "${inviteData.user_email}" invited to team successfully!`
-        );
-      } catch (err) {
-        alert("Failed to invite member: " + (err as Error).message);
       }
     }
   };
@@ -331,21 +261,22 @@ export function TeamSection() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Teams Section */}
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Users className="h-6 w-6 mr-2 text-purple-600" />
-            Teams ({teams.length})
-          </h2>
-
-          <Button
-            onClick={() => setShowCreateTeam(!showCreateTeam)}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Team
-          </Button>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <Users className="h-6 w-6 mr-2 text-purple-600" />
+              Teams ({teams.length})
+            </h2>
+            <Button
+              onClick={() => setShowCreateTeam(!showCreateTeam)}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Team
+            </Button>
+          </div>
 
           {/* Create Team Form */}
           {showCreateTeam && (
@@ -417,7 +348,6 @@ export function TeamSection() {
                 onClick={() => {
                   setSelectedTeam(team);
                   loadTeamDeadlines(team.id);
-                  loadTeamMembers(team.id);
                 }}
               >
                 <CardContent className="p-4">
@@ -428,160 +358,12 @@ export function TeamSection() {
                     </p>
                   )}
                   <div className="text-xs text-purple-600 mt-2">
-                    Click to manage members & deadlines
+                    Click to manage deadlines
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-        </div>
-
-        {/* Team Members Section */}
-        <div className="space-y-6">
-          {selectedTeam && (
-            <>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                <Users className="h-6 w-6 mr-2 text-green-600" />
-                Team Members ({teamMembers.length})
-              </h2>
-
-              <Button
-                onClick={() => setShowInviteMember(!showInviteMember)}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite Member
-              </Button>
-
-              {/* Invite Member Form */}
-              {showInviteMember && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <Card>
-                    <CardContent className="p-6 space-y-4">
-                      <div>
-                        <Label htmlFor="userEmail">User Email</Label>
-                        <Input
-                          id="userEmail"
-                          type="email"
-                          placeholder="Enter user email address"
-                          value={inviteMember.user_email}
-                          onChange={(e) =>
-                            setInviteMember({
-                              ...inviteMember,
-                              user_email: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="memberRole">Role</Label>
-                        <Select
-                          value={inviteMember.role}
-                          onValueChange={(
-                            value: "admin" | "member" | "viewer"
-                          ) =>
-                            setInviteMember({ ...inviteMember, role: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">
-                              Admin - Full access
-                            </SelectItem>
-                            <SelectItem value="member">
-                              Member - Can edit
-                            </SelectItem>
-                            <SelectItem value="viewer">
-                              Viewer - Read only
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Button onClick={inviteTeamMember} className="flex-1">
-                          <Mail className="h-4 w-4 mr-2" />
-                          Send Invitation
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowInviteMember(false)}
-                          className="flex-1"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
-              {/* Members List */}
-              <div className="space-y-3">
-                {teamMembers.map((member, index) => (
-                  <Card
-                    key={index}
-                    className="hover:shadow-md transition-shadow"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {member.username.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {member.username}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {member.email}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            variant={
-                              member.role === "admin"
-                                ? "destructive"
-                                : member.role === "member"
-                                ? "default"
-                                : "secondary"
-                            }
-                            className="flex items-center space-x-1"
-                          >
-                            {member.role === "admin" && (
-                              <Crown className="h-3 w-3" />
-                            )}
-                            {member.role === "member" && (
-                              <Shield className="h-3 w-3" />
-                            )}
-                            <span className="capitalize">{member.role}</span>
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {teamMembers.length === 0 && (
-                  <Card>
-                    <CardContent className="p-6 text-center text-gray-500">
-                      <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No members yet. Invite someone to get started!</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </>
-          )}
         </div>
 
         {/* Team Deadlines Section */}

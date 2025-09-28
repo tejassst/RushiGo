@@ -13,6 +13,7 @@ class PriorityLevel(str, Enum):
 class DeadlineBase(BaseModel):
     title: str
     description: Optional[str] = None
+    course: Optional[str] = None
     date: datetime
     priority: PriorityLevel = Field(default=PriorityLevel.medium)
     estimated_hours: Optional[float] = Field(default=0.0, ge=0.0)
@@ -31,9 +32,11 @@ class DeadlineCreate(DeadlineBase):
 class DeadlineUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    course: Optional[str] = None
     date: Optional[datetime] = None
     priority: Optional[PriorityLevel] = None
     completed: Optional[bool] = None
+    estimated_hours: Optional[float] = None
 
 
 class DeadlineResponse(DeadlineBase):

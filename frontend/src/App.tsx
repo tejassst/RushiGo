@@ -9,6 +9,7 @@ import {
   TeamSection,
 } from "./components";
 import { AuthModal } from "./components/AuthModal";
+import { ToastContainer } from "./components/Toast";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import "./index.css";
 import "./App.css";
@@ -86,6 +87,8 @@ function AppContent() {
         mode={authModal.mode}
         onModeChange={switchAuthMode}
       />
+
+      <ToastContainer />
     </div>
   );
 }

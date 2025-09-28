@@ -23,6 +23,7 @@ export interface Deadline {
   id: number;
   title: string;
   description?: string;
+  course?: string;
   date: string;
   priority: 'low' | 'medium' | 'high';
   estimated_hours?: number;
@@ -35,9 +36,20 @@ export interface Deadline {
 export interface CreateDeadlineRequest {
   title: string;
   description?: string;
+  course?: string;
   date: string;
   priority: 'low' | 'medium' | 'high';
   estimated_hours?: number;
+}
+
+export interface UpdateDeadlineRequest {
+  title?: string;
+  description?: string;
+  course?: string;
+  date?: string;
+  priority?: 'low' | 'medium' | 'high';
+  estimated_hours?: number;
+  completed?: boolean;
 }
 
 export interface Team {
@@ -49,6 +61,21 @@ export interface Team {
 export interface CreateTeamRequest {
   name: string;
   description?: string;
+}
+
+export interface TeamMember {
+  email: string;
+  username: string;
+  role: string;
+}
+
+export interface InviteMemberRequest {
+  user_email: string;
+  role: string;
+}
+
+export interface TeamDeadline extends Deadline {
+  team_id?: number;
 }
 
 export class ApiClient {
@@ -85,7 +112,20 @@ export class ApiClient {
       throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    return response.json();
+    // Handle responses with no content (like 204)
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return undefined as T;
+    }
+
+    // Check if response has JSON content
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    }
+
+    // For non-JSON responses, return the text or undefined
+    const text = await response.text();
+    return (text ? text : undefined) as T;
   }
 
   // Auth methods
@@ -144,7 +184,7 @@ export class ApiClient {
     });
   }
 
-  async updateDeadline(id: number, deadline: Partial<CreateDeadlineRequest>): Promise<Deadline> {
+  async updateDeadline(id: number, deadline: UpdateDeadlineRequest): Promise<Deadline> {
     return this.request<Deadline>(`/deadlines/${id}`, {
       method: 'PUT',
       body: JSON.stringify(deadline),
@@ -152,7 +192,7 @@ export class ApiClient {
   }
 
   async deleteDeadline(id: number): Promise<void> {
-    await this.request(`/deadlines/${id}`, {
+    await this.request<void>(`/deadlines/${id}`, {
       method: 'DELETE',
     });
   }
@@ -189,14 +229,40 @@ export class ApiClient {
     });
   }
 
-  async getTeamMembers(teamId: number) {
-    return this.request(`/teams/${teamId}/members`);
+  async getTeam(teamId: number): Promise<Team> {
+    return this.request<Team>(`/teams/${teamId}`);
   }
 
-  async inviteTeamMember(teamId: number, userEmail: string, role: string = 'member') {
-    return this.request(`/teams/${teamId}/invite`, {
+  async getTeamMembers(teamId: number): Promise<TeamMember[]> {
+    return this.request<TeamMember[]>(`/teams/${teamId}/members`);
+  }
+
+  async inviteTeamMember(teamId: number, invite: InviteMemberRequest): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/teams/${teamId}/invite`, {
       method: 'POST',
-      body: JSON.stringify({ user_email: userEmail, role }),
+      body: JSON.stringify(invite),
+    });
+  }
+
+  async removeMember(teamId: number, userId: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/teams/${teamId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTeamDeadlines(teamId: number): Promise<Deadline[]> {
+    return this.request<Deadline[]>(`/deadlines/team/${teamId}`);
+  }
+
+  async assignDeadlineToTeam(deadlineId: number, teamId: number): Promise<Deadline> {
+    return this.request<Deadline>(`/deadlines/${deadlineId}/assign-team/${teamId}`, {
+      method: 'POST',
+    });
+  }
+
+  async removeDeadlineFromTeam(deadlineId: number): Promise<Deadline> {
+    return this.request<Deadline>(`/deadlines/${deadlineId}/remove-from-team`, {
+      method: 'POST',
     });
   }
 }

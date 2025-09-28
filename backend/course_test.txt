@@ -1,0 +1,32 @@
+COMPUTER SCIENCE 101 - Fall 2025 Syllabus
+
+Assignment Deadlines:
+1. Programming Assignment 1
+   - Due: December 5, 2025 at 11:59 PM
+   - Implement basic algorithms in Python
+   - Worth 15% of final grade
+   - Priority: High
+
+2. Midterm Exam
+   - Date: November 20, 2025 at 2:00 PM
+   - Covers chapters 1-6
+   - Location: Room 201
+   - Priority: High
+
+MATHEMATICS 201 - Calculus II
+
+Project Deadlines:
+1. Calculus Problem Set 3
+   - Due: November 25, 2025
+   - Integration by parts problems
+   - Submit via email
+   - Priority: Medium
+
+PHYSICS 150 - General Physics
+
+Lab Reports:
+1. Pendulum Motion Lab Report
+   - Due: December 1, 2025
+   - Analysis of oscillatory motion
+   - Include error calculations
+   - Priority: Medium

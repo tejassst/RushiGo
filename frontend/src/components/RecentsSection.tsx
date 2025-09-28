@@ -9,12 +9,29 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  Plus,
+  X,
 } from "lucide-react";
 import { useDeadlines } from "../hooks/useDeadlines";
-import { Deadline } from "../services/api";
+import {
+  Deadline as APIDeadline,
+  CreateDeadlineRequest,
+} from "../services/api";
+
+// Create a local Deadline type that matches what DeadlineCard expects
+type TransformedDeadline = {
+  id: number;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  priority: "high" | "medium" | "low";
+  source: string;
+  status: "pending" | "completed" | "deleted";
+};
 
 // Transform API deadline to component deadline
-const transformDeadline = (deadline: Deadline) => ({
+const transformDeadline = (deadline: APIDeadline): TransformedDeadline => ({
   id: deadline.id,
   title: deadline.title,
   description: deadline.description || "No description available",
@@ -24,18 +41,34 @@ const transformDeadline = (deadline: Deadline) => ({
     minute: "2-digit",
   }),
   priority: deadline.priority,
-  source: "API",
+  source: deadline.description?.includes("Extracted from")
+    ? "Document Scan"
+    : "Manual Entry",
   status: deadline.completed ? ("completed" as const) : ("pending" as const),
 });
 
 export function RecentsSection() {
-  const { deadlines, loading, error, toggleComplete, fetchDeadlines } =
-    useDeadlines();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const {
+    deadlines,
+    loading,
+    error,
+    fetchDeadlines,
+    deleteDeadline,
+    createDeadline,
+  } = useDeadlines();
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
   const [filteredDeadlines, setFilteredDeadlines] = useState<
-    ReturnType<typeof transformDeadline>[]
+    TransformedDeadline[]
   >([]);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [formData, setFormData] = useState<CreateDeadlineRequest>({
+    title: "",
+    description: "",
+    date: "",
+    priority: "medium",
+    estimated_hours: 0,
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     const transformed = deadlines.map(transformDeadline);
@@ -43,38 +76,63 @@ export function RecentsSection() {
       if (filter === "all") return true;
       return deadline.status === filter;
     });
-    setFilteredDeadlines(filtered);
-    setCurrentIndex(0);
+
+    // Sort deadlines by date (earliest first)
+    const sorted = filtered.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    setFilteredDeadlines(sorted);
   }, [deadlines, filter]);
-
-  const handleSwipeLeft = async (_id: number) => {
-    // Keep as pending - just move to next card
-    nextCard();
-  };
-
-  const handleSwipeRight = async (id: number) => {
-    // Mark as completed
-    try {
-      await toggleComplete(id);
-      nextCard();
-    } catch (err) {
-      console.error("Failed to toggle completion:", err);
-    }
-  };
-
-  const nextCard = () => {
-    if (currentIndex < filteredDeadlines.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
-
-  const resetCards = () => {
-    setCurrentIndex(0);
-  };
 
   const getFilteredCount = (status: string) => {
     const transformed = deadlines.map(transformDeadline);
     return transformed.filter((d) => d.status === status).length;
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this deadline?")) {
+      try {
+        await deleteDeadline(id);
+      } catch (error) {
+        console.error("Failed to delete deadline:", error);
+      }
+    }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.date) return;
+
+    setIsCreating(true);
+    try {
+      await createDeadline({
+        ...formData,
+        date: new Date(formData.date).toISOString(),
+      });
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        date: "",
+        priority: "medium",
+        estimated_hours: 0,
+      });
+      setShowManualForm(false);
+    } catch (error) {
+      console.error("Failed to create deadline:", error);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleFormChange = (
+    field: keyof CreateDeadlineRequest,
+    value: string | number
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
@@ -114,7 +172,12 @@ export function RecentsSection() {
     );
   }
 
-  if (filteredDeadlines.length === 0) {
+  const filteredDeadlinesCount = deadlines.filter((deadline) => {
+    if (filter === "all") return true;
+    return filter === "pending" ? !deadline.completed : deadline.completed;
+  }).length;
+
+  if (filteredDeadlinesCount === 0 && deadlines.length > 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-12">
@@ -149,11 +212,11 @@ export function RecentsSection() {
           Your Deadlines
         </h1>
         <p className="text-gray-600 text-lg mb-6">
-          Swipe left to keep pending, swipe right to mark as read
+          Your deadlines sorted by date, with the earliest ones first
         </p>
 
         {/* Filter buttons */}
-        <div className="flex flex-wrap justify-center gap-3 mb-6">
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
           <Button
             variant={filter === "all" ? "default" : "outline"}
             onClick={() => setFilter("all")}
@@ -193,66 +256,199 @@ export function RecentsSection() {
         </div>
       </div>
 
-      {/* Card stack */}
-      <div className="relative h-96 mb-8">
-        <div className="absolute inset-0 flex items-center justify-center">
-          {filteredDeadlines.map((deadline, index) => {
-            if (index < currentIndex) return null;
-
-            const isActive = index === currentIndex;
-            const zIndex = filteredDeadlines.length - index;
-            const scale = isActive ? 1 : 0.95 - (index - currentIndex) * 0.05;
-            const yOffset = (index - currentIndex) * 10;
-
-            return (
-              <DeadlineCard
-                key={deadline.id}
-                deadline={deadline}
-                onSwipeLeft={handleSwipeLeft}
-                onSwipeRight={handleSwipeRight}
-                style={{
-                  position: "absolute",
-                  zIndex,
-                  transform: `scale(${scale}) translateY(${yOffset}px)`,
-                  pointerEvents: isActive ? "auto" : "none",
-                }}
-              />
-            );
-          })}
+      {/* Manual Deadline Creation */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Create a Deadline
+          </h2>
+          <Button
+            onClick={() => setShowManualForm(!showManualForm)}
+            variant="outline"
+            className="border-purple-200 text-purple-600 hover:bg-purple-50"
+          >
+            {showManualForm ? (
+              <>
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Deadline
+              </>
+            )}
+          </Button>
         </div>
+
+        {showManualForm && (
+          <form onSubmit={handleFormSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.title}
+                  onChange={(e) => handleFormChange("title", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter deadline title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Due Date *
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={formData.date}
+                  onChange={(e) => handleFormChange("date", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) =>
+                    handleFormChange(
+                      "priority",
+                      e.target.value as "low" | "medium" | "high"
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estimated Hours
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.estimated_hours}
+                  onChange={(e) =>
+                    handleFormChange(
+                      "estimated_hours",
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                rows={3}
+                value={formData.description}
+                onChange={(e) =>
+                  handleFormChange("description", e.target.value)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Enter deadline description (optional)"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="submit"
+                disabled={isCreating || !formData.title || !formData.date}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Deadline
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowManualForm(false)}
+                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
 
-      {/* Controls */}
-      <div className="text-center">
-        <div className="flex items-center justify-center space-x-4 mb-4">
-          <Badge variant="outline" className="text-sm">
-            {currentIndex + 1} of {filteredDeadlines.length}
-          </Badge>
-          {currentIndex >= filteredDeadlines.length - 1 && (
-            <Button
-              onClick={resetCards}
-              variant="outline"
-              size="sm"
-              className="border-purple-200 text-purple-600 hover:bg-purple-50"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Reset Cards
-            </Button>
-          )}
-        </div>
+      {/* Deadlines Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-12">
+        {filteredDeadlines.map((transformedDeadline) => {
+          const originalDeadline = deadlines.find(
+            (d) => d.id === transformedDeadline.id
+          );
+          return originalDeadline ? (
+            <div key={transformedDeadline.id} className="flex justify-center">
+              <DeadlineCard
+                deadline={originalDeadline}
+                onUpdate={() => {
+                  // Handle update - this will be handled by the hook automatically
+                }}
+                onDelete={handleDelete}
+              />
+            </div>
+          ) : null;
+        })}
+      </div>
 
-        {currentIndex >= filteredDeadlines.length - 1 && (
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              All caught up!
-            </h3>
-            <p className="text-gray-600">
-              You've reviewed all {filter} deadlines. Great job staying
-              organized!
-            </p>
+      {/* Results summary */}
+      <div className="text-center">
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
+          <div className="flex items-center justify-center space-x-2 mb-3">
+            <Calendar className="h-5 w-5 text-purple-600" />
+            <Badge variant="outline" className="text-sm">
+              {
+                deadlines.filter((deadline) => {
+                  if (filter === "all") return true;
+                  return filter === "pending"
+                    ? !deadline.completed
+                    : deadline.completed;
+                }).length
+              }{" "}
+              {deadlines.filter((deadline) => {
+                if (filter === "all") return true;
+                return filter === "pending"
+                  ? !deadline.completed
+                  : deadline.completed;
+              }).length === 1
+                ? "deadline"
+                : "deadlines"}{" "}
+              found
+            </Badge>
           </div>
-        )}
+          <p className="text-gray-600">
+            {filter === "all"
+              ? "All your deadlines are displayed above, sorted by date."
+              : `Showing ${filter} deadlines, sorted by date.`}
+          </p>
+        </div>
       </div>
     </div>
   );

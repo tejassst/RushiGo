@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiClient, Deadline, CreateDeadlineRequest } from '../services/api';
+import { apiClient, Deadline, CreateDeadlineRequest, UpdateDeadlineRequest } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export function useDeadlines() {
@@ -35,7 +35,7 @@ export function useDeadlines() {
     }
   };
 
-  const updateDeadline = async (id: number, updates: Partial<CreateDeadlineRequest>) => {
+  const updateDeadline = async (id: number, updates: UpdateDeadlineRequest) => {
     try {
       const updatedDeadline = await apiClient.updateDeadline(id, updates);
       setDeadlines(prev => prev.map(d => d.id === id ? updatedDeadline : d));
@@ -78,7 +78,7 @@ export function useDeadlines() {
     if (!deadline) return;
 
     try {
-      await updateDeadline(id, { completed: !deadline.completed } as any);
+      await updateDeadline(id, { completed: !deadline.completed });
     } catch (err) {
       // Error already handled in updateDeadline
     }
