@@ -1,12 +1,45 @@
 {
+  // ----------------------------------------------------
+  // 1. TAILWIND CSS FIX (Keep these to fix the original issue)
+  // ----------------------------------------------------
+  "css.validate": false,
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+
+  // ----------------------------------------------------
+  // 2. PYTHON CONFIG (Changes to fix the validation error)
+  // ----------------------------------------------------
+  
+  // Set the default interpreter path
   "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  
+  // Extra paths for analysis
   "python.analysis.extraPaths": [
     "${workspaceFolder}/backend/.venv/lib/python3.13/site-packages",
     "${workspaceFolder}/backend/.venv/lib64/python3.13/site-packages",
     "${workspaceFolder}/backend"
   ],
   "python.analysis.typeCheckingMode": "basic",
+
+  // *** REMOVE THE GENERIC 'editor.defaultFormatter' BLOCK FOR PYTHON ***
+  // *** USE THE NATIVE PYTHON SETTING INSTEAD ***
+
+  // If you use Black for formatting (recommended):
+  "python.formatting.provider": "black",
+  
+  // If you want to use the default extension's formatter (autopep8/yapf/etc.):
+  // If you have no other formatter installed, the Python extension handles it, 
+  // but if you are getting the error, explicitly install Black or Autopep8 
+  // and set the provider.
+
+  // You can safely remove the entire `"[python]"` block:
+  /*
   "[python]": {
     "editor.defaultFormatter": "ms-python.python"
   }
+  */
 }
