@@ -1,6 +1,5 @@
 annotated-types==0.7.0
 anyio==4.11.0
--e file:///home/tejast/Documents/Projects/rushiGo/backend
 bcrypt==5.0.0
 black==25.9.0
 cachetools==5.5.2
