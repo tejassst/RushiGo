@@ -27,7 +27,7 @@ export function Header({
 
   const navItems = [
     { key: "home" as const, label: "Home" },
-    { key: "demo" as const, label: "Demo" },
+    ...(!isAuthenticated ? [{ key: "demo" as const, label: "Demo" }] : []),
     ...(isAuthenticated
       ? [
           { key: "upload" as const, label: "Upload" },
@@ -49,7 +49,7 @@ export function Header({
               <img
                 src="/rushigo_logo.jpeg"
                 alt="RushiGo Logo"
-                className="w-10 h-10 rounded-full object-cover shadow-lg"
+                className="h-10 w-10 rounded-lg shadow-md"
               />
               <div>
                 <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">

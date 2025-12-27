@@ -31,6 +31,7 @@ class MemberInvite(BaseModel):
     role: str = "member"
 
 class MemberResponse(BaseModel):
+    id: int
     email: str
     username: str
     role: str
@@ -54,7 +55,16 @@ def create_team(team: TeamCreate, db: Session = Depends(get_db), current_user: U
 def get_my_teams(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get all teams the current user is a member of"""
     memberships = db.query(Membership).filter(Membership.user_id == current_user.id).all()
-    teams = [membership.team for membership in memberships]
+    
+    # Explicitly load teams and filter out None values
+    teams = []
+    for membership in memberships:
+        team_id = getattr(membership, 'team_id', None)
+        if team_id is not None:
+            team = db.query(Team).filter(Team.id == team_id).first()
+            if team:
+                teams.append(team)
+    
     return teams
 
 @router.get("/{team_id}", response_model=TeamResponse)
@@ -137,6 +147,7 @@ def get_team_members(team_id: int, db: Session = Depends(get_db), current_user: 
     members = []
     for m in team.members:
         members.append({
+            "id": m.user.id,
             "email": m.user.email,
             "username": m.user.username,
             "role": m.role
@@ -175,3 +186,25 @@ def remove_member(
     db.commit()
     
     return {"message": "Member removed successfully"}
+
+@router.delete("/{team_id}")
+def delete_team(team_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Delete a team"""
+    # Check if current user is admin
+    admin_membership = db.query(Membership).filter(
+        Membership.team_id == team_id,
+        Membership.user_id == current_user.id,
+        Membership.role == "admin"
+    ).first()
+    
+    if not admin_membership:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only team admins can delete teams")
+
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    db.delete(team)
+    db.commit()
+    
+    return {"message": "Team deleted successfully"}

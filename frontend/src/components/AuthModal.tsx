@@ -28,6 +28,12 @@ export function AuthModal({
 
   const { login, register } = useAuth();
 
+  // Email validation helper
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const resetForm = () => {
     setEmail("");
     setUsername("");
@@ -48,21 +54,37 @@ export function AuthModal({
     setLoading(true);
 
     try {
+      // Validate email format for both login and signup
+      if (!email.trim()) {
+        setError("Email is required");
+        setLoading(false);
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        setError("Please enter a valid email address");
+        setLoading(false);
+        return;
+      }
+
       if (mode === "login") {
         await login(email, password);
         handleClose();
       } else {
         // Validation for signup
-        if (password !== confirmPassword) {
-          setError("Passwords do not match");
+        if (!username.trim()) {
+          setError("Username is required");
+          setLoading(false);
           return;
         }
         if (password.length < 6) {
           setError("Password must be at least 6 characters long");
+          setLoading(false);
           return;
         }
-        if (!username.trim()) {
-          setError("Username is required");
+        if (password !== confirmPassword) {
+          setError("Passwords do not match");
+          setLoading(false);
           return;
         }
 

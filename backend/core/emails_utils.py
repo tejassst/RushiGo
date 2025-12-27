@@ -1,39 +1,51 @@
 # email_utils.py
 # Name: Email Utility
-# Description: Sends emails using Mailgun API (works with sandbox domain)
+# Description: Sends emails using Gmail API
 # Preconditions:
-#   - Environment variables must be set:
-#       MAILGUN_DOMAIN, MAILGUN_API_KEY, FROM_EMAIL
-#   - Mailgun sandbox domain requires recipients to be verified in Mailgun
+#   - Gmail OAuth2 credentials must be set up (credentials.json)
+#   - User must authenticate on first run (creates token.json)
 # Postconditions:
-#   - Email is sent to the specified recipient (if verified)
+#   - Email is sent to the specified recipient via authenticated Gmail account
 from dotenv import load_dotenv
 load_dotenv()  # loads all vars from .env into os.environ
 import os
-import requests
+import logging
+from typing import Optional
 
-MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN")  # e.g. sandboxXXX.mailgun.org
-MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY")
-FROM_EMAIL = os.getenv("FROM_EMAIL")  # e.g. "Rushigo <no-reply@YOURDOMAIN>"
+from services.gmail_service import get_gmail_service
 
-def send_email(to_email: str, subject: str, text: str, html: str | None = None):
-    """Send an email using Mailgun API."""
-    if not MAILGUN_DOMAIN or not MAILGUN_API_KEY or not FROM_EMAIL:
-        raise ValueError("Missing Mailgun environment variables")
+logger = logging.getLogger(__name__)
 
-    resp = requests.post(
-        f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
-        auth=("api", MAILGUN_API_KEY),
-        data={
-            "from": FROM_EMAIL,
-            "to": to_email,
-            "subject": subject,
-            "text": text,
-            **({"html": html} if html else {}),
-        },
-        timeout=10,
-    )
+# Optional: Set a default FROM_EMAIL for display name
+FROM_EMAIL = os.getenv("FROM_EMAIL", "RushiGo Notifications")
 
-    # Raise error if request failed
-    resp.raise_for_status()
-    return resp.json()
+def send_email(to_email: str, subject: str, text: str, html: Optional[str] = None):
+    """
+    Send an email using Gmail API.
+    
+    Args:
+        to_email: Recipient email address
+        subject: Email subject
+        text: Plain text body
+        html: Optional HTML body
+    
+    Returns:
+        dict: Response from Gmail API with message details
+    
+    Raises:
+        Exception: If email sending fails
+    """
+    try:
+        gmail_service = get_gmail_service()
+        result = gmail_service.send_email(
+            to_email=to_email,
+            subject=subject,
+            text=text,
+            html=html,
+            from_email=FROM_EMAIL
+        )
+        logger.info(f"Email sent to {to_email}: {subject}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        raise

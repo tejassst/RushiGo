@@ -39,6 +39,13 @@ function AppContent() {
       setAuthModal({ isOpen: true, mode: "login" });
       return;
     }
+
+    // Redirect authenticated users away from demo page
+    if (isAuthenticated && section === "demo") {
+      setActiveSection("recents");
+      return;
+    }
+
     setActiveSection(section);
   };
 
@@ -68,9 +75,14 @@ function AppContent() {
       />
 
       <main className="relative z-10 w-full">
-        {activeSection === "home" && <HomePage onNavigate={handleNavigate} />}
+        {activeSection === "home" && (
+          <HomePage
+            onNavigate={handleNavigate}
+            isAuthenticated={isAuthenticated}
+          />
+        )}
 
-        {activeSection === "demo" && (
+        {activeSection === "demo" && !isAuthenticated && (
           <DemoSection onNavigate={handleNavigate} />
         )}
 

@@ -5,24 +5,28 @@
 ## 🌟 Features
 
 ### ✅ **Smart Deadline Management**
+
 - Create, track, and organize academic deadlines
 - Course-based categorization
 - Progress tracking and completion status
 - Team collaboration and shared deadlines
 
 ### 📧 **Intelligent Email Notifications**
+
 - **Automatic Reminders**: 3 days, 1 day, and same-day notifications
 - **Daily Digest**: Morning summary of upcoming and overdue deadlines
 - **Beautiful Templates**: Responsive HTML emails with professional design
 - **Smart Scheduling**: Background processing with no performance impact
 
 ### 🌐 **Modern Tech Stack**
+
 - **Backend**: FastAPI (Python) with SQLAlchemy ORM
 - **Database**: PostgreSQL (Supabase Cloud)
 - **Email Service**: Mailgun integration
 - **Architecture**: RESTful API with automatic documentation
 
 ### 🚀 **Production Ready**
+
 - Cloud database with automatic backups
 - Comprehensive error handling and logging
 - Background task scheduling
@@ -31,6 +35,7 @@
 ## 🛠️ Quick Start
 
 ### **Prerequisites**
+
 - Python 3.8+
 - PostgreSQL database (or Supabase account)
 - Mailgun account for email notifications
@@ -38,12 +43,14 @@
 ### **Installation**
 
 1. **Clone Repository**
+
 ```bash
 git clone https://github.com/yourusername/rushiGo.git
 cd rushiGo
 ```
 
 2. **Setup Backend**
+
 ```bash
 cd backend
 python -m venv .venv
@@ -52,22 +59,26 @@ pip install -r requirements.txt
 ```
 
 3. **Configure Environment**
+
 ```bash
 cp .env.example .env
 # Edit .env with your credentials (see Configuration section)
 ```
 
 4. **Initialize Database**
+
 ```bash
 python scripts/init_db.py
 ```
 
 5. **Start Server**
+
 ```bash
 python main.py
 ```
 
 6. **Access Application**
+
 - **API**: http://localhost:8000
 - **Documentation**: http://localhost:8000/docs
 - **Admin Panel**: http://localhost:8000/admin
@@ -111,12 +122,14 @@ GEMINI_API_KEY=your-gemini-api-key
 ### **Database Setup**
 
 #### **Option 1: Supabase (Recommended)**
+
 1. Create account at [supabase.com](https://supabase.com)
 2. Create new project
 3. Get connection string from Settings → Database
 4. Update `DATABASE_URL` in `.env`
 
 #### **Option 2: Local PostgreSQL**
+
 1. Install PostgreSQL locally
 2. Create database: `createdb rushigo`
 3. Update `DATABASE_URL`: `postgresql://user:pass@localhost:5432/rushigo`
@@ -165,37 +178,44 @@ rushiGo/
 ### **Core Endpoints**
 
 #### **Authentication**
+
 - `POST /auth/register` - User registration
 - `POST /auth/login` - User login
 - `GET /auth/me` - Get current user
 
 #### **Deadlines**
+
 - `GET /deadlines` - List user deadlines
 - `POST /deadlines` - Create deadline
 - `PUT /deadlines/{id}` - Update deadline
 - `DELETE /deadlines/{id}` - Delete deadline
 
 #### **Notifications**
+
 - `POST /notifications/send-deadline-notifications` - Manual trigger
 - `POST /notifications/send-test-notification/{user_id}` - Test email
 - `GET /notifications/statistics` - System stats
 
 ### **Interactive Documentation**
+
 Visit `http://localhost:8000/docs` for complete API documentation with interactive testing.
 
 ## 📧 Email Notification System
 
 ### **Automatic Notifications**
+
 - **Deadline Reminders**: Sent 3 days, 1 day, and same-day before deadlines
 - **Daily Digest**: Morning summary at 8 AM with upcoming and overdue items
 - **Overdue Alerts**: Daily notifications for missed deadlines
 
 ### **Email Templates**
+
 - **Responsive Design**: Mobile-friendly HTML templates
 - **Professional Styling**: Clean, modern design with branding
 - **Personalization**: User names, deadline details, course information
 
 ### **Testing Notifications**
+
 ```bash
 # Test Mailgun connection
 cd backend && python scripts/simple_mailgun_test.py
@@ -210,6 +230,7 @@ curl -X POST "http://localhost:8000/api/notifications/send-deadline-notification
 ## 🧪 Development
 
 ### **Running Tests**
+
 ```bash
 # Test email system
 python scripts/test_mailgun.py
@@ -222,6 +243,7 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ```
 
 ### **Development Server**
+
 ```bash
 # Start with auto-reload
 python main.py
@@ -231,6 +253,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### **Database Management**
+
 ```bash
 # Initialize/reset database
 python scripts/init_db.py
@@ -242,6 +265,7 @@ python scripts/init_db.py
 ## 🌐 Deployment
 
 ### **Development Deployment**
+
 1. Follow Quick Start guide above
 2. Use sandbox Mailgun domain
 3. Use Supabase free tier
@@ -250,6 +274,7 @@ python scripts/init_db.py
 ### **Production Deployment**
 
 #### **Environment Setup**
+
 ```bash
 # Production environment variables
 DEBUG=False
@@ -259,16 +284,19 @@ ALLOWED_ORIGINS=https://yourdomain.com
 ```
 
 #### **Database**
+
 - Use production PostgreSQL or Supabase Pro
 - Set up automated backups
 - Configure connection pooling
 
 #### **Email Service**
+
 - Upgrade from Mailgun sandbox to verified domain
 - Configure DNS records (SPF, DKIM)
 - Remove authorized recipient restrictions
 
 #### **Server**
+
 - Deploy on cloud platform (Heroku, AWS, DigitalOcean)
 - Set up reverse proxy (Nginx)
 - Configure SSL certificates
@@ -277,6 +305,7 @@ ALLOWED_ORIGINS=https://yourdomain.com
 ## 📊 Monitoring & Analytics
 
 ### **System Health**
+
 ```bash
 # Check notification statistics
 curl -X GET "http://localhost:8000/api/notifications/statistics"
@@ -289,6 +318,7 @@ python scripts/simple_mailgun_test.py
 ```
 
 ### **Performance Metrics**
+
 - **Response Time**: < 2 seconds for API endpoints
 - **Email Delivery**: < 5 minutes via Mailgun
 - **Database Queries**: Optimized with proper indexing
@@ -299,6 +329,7 @@ python scripts/simple_mailgun_test.py
 ### **Common Issues**
 
 #### **Email Not Sending (401 Error)**
+
 ```bash
 # Solution: Fix Mailgun API key
 1. Check Mailgun dashboard → Settings → API Keys
@@ -308,6 +339,7 @@ python scripts/simple_mailgun_test.py
 ```
 
 #### **Database Connection Failed**
+
 ```bash
 # Solution: Check database configuration
 1. Verify DATABASE_URL in .env
@@ -317,6 +349,7 @@ python scripts/simple_mailgun_test.py
 ```
 
 #### **No Email Received**
+
 ```bash
 # Solution: Check email configuration
 1. Verify recipient in Mailgun authorized list (sandbox)
@@ -326,6 +359,7 @@ python scripts/simple_mailgun_test.py
 ```
 
 ### **Debug Commands**
+
 ```bash
 # View server logs
 tail -f logs/app.log
@@ -339,6 +373,7 @@ curl -X GET "http://localhost:8000/health"  # API
 ## 🤝 Contributing
 
 ### **Development Workflow**
+
 1. Fork the repository
 2. Create feature branch: `git checkout -b feature/amazing-feature`
 3. Make changes and test thoroughly
@@ -347,6 +382,7 @@ curl -X GET "http://localhost:8000/health"  # API
 6. Create Pull Request
 
 ### **Code Standards**
+
 - Follow PEP 8 for Python code
 - Add docstrings for all functions
 - Include type hints
@@ -374,7 +410,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Status**: ✅ **Production Ready**  
+**Status**: **Production Ready**  
 **Version**: 1.0.0  
 **Last Updated**: 2024
 

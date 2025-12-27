@@ -8,7 +8,11 @@ type Props = {
   onDelete?: (id: number) => void;
 };
 
-export const DeadlineCard: React.FC<Props> = ({ deadline, onDelete }) => {
+export const DeadlineCard: React.FC<Props> = ({
+  deadline,
+  onUpdate,
+  onDelete,
+}) => {
   const formatDateTime = () => {
     try {
       const dateTime = new Date(deadline.date);
@@ -116,6 +120,24 @@ export const DeadlineCard: React.FC<Props> = ({ deadline, onDelete }) => {
 
       {/* Action Buttons */}
       <div className="flex gap-2 pt-4 border-t border-gray-200">
+        {!deadline.completed && (
+          <button
+            onClick={() => onUpdate?.({ ...deadline, completed: true })}
+            className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+          >
+            <CheckCircle className="h-4 w-4" />
+            Complete
+          </button>
+        )}
+        {deadline.completed && (
+          <button
+            onClick={() => onUpdate?.({ ...deadline, completed: false })}
+            className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
+          >
+            <CheckCircle className="h-4 w-4" />
+            Mark Incomplete
+          </button>
+        )}
         <button
           onClick={() => onDelete?.(deadline.id)}
           className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"

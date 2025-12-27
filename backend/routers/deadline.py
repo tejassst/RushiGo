@@ -67,18 +67,14 @@ async def create_deadline(
 
 @router.get("/", response_model=List[DeadlineResponse])
 async def get_deadlines(
-    skip: int = 0,
-    limit: int = 10,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get all deadlines for the current user with pagination
+    Get all deadlines for the current user
     """
     deadlines = db.query(Deadline)\
         .filter(Deadline.user_id == current_user.id)\
-        .offset(skip)\
-        .limit(limit)\
         .all()
     return deadlines
 
@@ -309,8 +305,8 @@ async def assign_deadline_to_team(
             detail="Team not found"
         )
     
-    # Assign deadline to team
-    deadline.team_id = team_id
+    # Assign deadline to team using setattr for SQLAlchemy Column
+    setattr(deadline, 'team_id', team_id)
     
     try:
         db.commit()
@@ -326,8 +322,6 @@ async def assign_deadline_to_team(
 @router.get("/team/{team_id}", response_model=List[DeadlineResponse])
 async def get_team_deadlines(
     team_id: int,
-    skip: int = 0,
-    limit: int = 10,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -349,6 +343,6 @@ async def get_team_deadlines(
     # Get team deadlines
     deadlines = db.query(Deadline).filter(
         Deadline.team_id == team_id
-    ).offset(skip).limit(limit).all()
+    ).all()
     
     return deadlines

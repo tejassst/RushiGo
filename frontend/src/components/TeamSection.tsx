@@ -22,6 +22,7 @@ import {
   Mail,
   Crown,
   Shield,
+  Trash2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -32,6 +33,7 @@ import {
   CreateDeadlineRequest,
   TeamMember,
   InviteMemberRequest,
+  DeleteTeam,
 } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -84,12 +86,20 @@ export function TeamSection() {
     user_email: "",
     role: "member",
   });
+  const [emailError, setEmailError] = useState<string>("");
+
+  // Email validation helper
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   // Load team data on component mount
   useEffect(() => {
     const loadTeamData = async () => {
       try {
         setLoading(true);
+        setError(null); // Clear any previous errors
         const userTeams = await apiClient.getTeams();
         setTeams(userTeams);
 
@@ -100,8 +110,15 @@ export function TeamSection() {
           await loadTeamMembers(firstTeam.id);
         }
       } catch (err) {
-        setError("Failed to load team data");
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load team data";
+        setError(`Failed to load team data: ${errorMessage}`);
         console.error("Error loading team data:", err);
+
+        // Log more details for debugging
+        if (err instanceof Error && "response" in err) {
+          console.error("Response error:", (err as any).response);
+        }
       } finally {
         setLoading(false);
       }
@@ -200,36 +217,68 @@ export function TeamSection() {
     }
   };
 
+  const removeMember = async (userId: number) => {
+    if (!selectedTeam) {
+      alert("No team selected!");
+      return;
+    }
+
+    if (window.confirm("Are you sure you want to remove this member?")) {
+      try {
+        await apiClient.removeMember(selectedTeam.id, userId);
+        if (selectedTeam) {
+          await loadTeamMembers(selectedTeam.id);
+        }
+      } catch (err) {
+        alert("Failed to remove member: " + (err as Error).message);
+      }
+    }
+  };
+
   const inviteTeamMember = async () => {
     if (!selectedTeam) {
       alert("No team selected!");
       return;
     }
 
-    if (inviteMember.user_email.trim()) {
-      try {
-        const inviteData: InviteMemberRequest = {
-          user_email: inviteMember.user_email,
-          role: inviteMember.role,
-        };
+    const email = inviteMember.user_email.trim();
 
-        await apiClient.inviteTeamMember(selectedTeam.id, inviteData);
+    if (!email) {
+      setEmailError("Please enter an email address");
+      return;
+    }
 
-        // Reload team members
-        await loadTeamMembers(selectedTeam.id);
+    if (!validateEmail(email)) {
+      setEmailError(
+        "Please enter a valid email address (e.g., user@example.com)"
+      );
+      return;
+    }
 
-        setInviteMember({
-          user_email: "",
-          role: "member",
-        });
-        setShowInviteMember(false);
+    setEmailError(""); // Clear any previous errors
 
-        console.log(
-          `✅ User "${inviteData.user_email}" invited to team successfully!`
-        );
-      } catch (err) {
-        alert("Failed to invite member: " + (err as Error).message);
-      }
+    try {
+      const inviteData: InviteMemberRequest = {
+        user_email: email,
+        role: inviteMember.role,
+      };
+
+      await apiClient.inviteTeamMember(selectedTeam.id, inviteData);
+
+      // Reload team members
+      await loadTeamMembers(selectedTeam.id);
+
+      setInviteMember({
+        user_email: "",
+        role: "member",
+      });
+      setShowInviteMember(false);
+
+      console.log(
+        ` User "${inviteData.user_email}" invited to team successfully!`
+      );
+    } catch (err) {
+      alert("Failed to invite member: " + (err as Error).message);
     }
   };
 
@@ -256,6 +305,22 @@ export function TeamSection() {
         }
       } catch (err) {
         alert("Failed to delete deadline: " + (err as Error).message);
+      }
+    }
+  };
+
+  const deleteTeam = async (teamId: number) => {
+    if (window.confirm("Are you sure you want to delete this team?")) {
+      try {
+        await apiClient.deleteTeam(teamId);
+        setTeams(teams.filter((team) => team.id !== teamId));
+        setSelectedTeam(null);
+        setTeamDeadlines([]);
+        setTeamMembers([]);
+
+        alert("Team deleted successfully.");
+      } catch (err) {
+        alert("Failed to delete team: " + (err as Error).message);
       }
     }
   };
@@ -409,27 +474,43 @@ export function TeamSection() {
             {teams.map((team) => (
               <Card
                 key={team.id}
-                className={`cursor-pointer transition-all ${
+                className={`transition-all ${
                   selectedTeam?.id === team.id
                     ? "ring-2 ring-purple-500 bg-purple-50"
                     : "hover:shadow-md hover:bg-gray-50"
                 }`}
-                onClick={() => {
-                  setSelectedTeam(team);
-                  loadTeamDeadlines(team.id);
-                  loadTeamMembers(team.id);
-                }}
               >
                 <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900">{team.name}</h3>
-                  {team.description && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      {team.description}
-                    </p>
-                  )}
-                  <div className="text-xs text-purple-600 mt-2">
-                    Click to manage members & deadlines
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedTeam(team);
+                      loadTeamDeadlines(team.id);
+                      loadTeamMembers(team.id);
+                    }}
+                  >
+                    <h3 className="font-semibold text-gray-900">{team.name}</h3>
+                    {team.description && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {team.description}
+                      </p>
+                    )}
+                    <div className="text-xs text-purple-600 mt-2">
+                      Click to manage members & deadlines
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteTeam(team.id);
+                    }}
+                    className="text-red-500 hover:text-red-700 mt-2 w-full"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Team
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -470,13 +551,25 @@ export function TeamSection() {
                           type="email"
                           placeholder="Enter user email address"
                           value={inviteMember.user_email}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setInviteMember({
                               ...inviteMember,
                               user_email: e.target.value,
-                            })
+                            });
+                            // Clear error when user starts typing
+                            if (emailError) setEmailError("");
+                          }}
+                          className={
+                            emailError
+                              ? "border-red-500 focus:ring-red-500"
+                              : ""
                           }
                         />
+                        {emailError && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {emailError}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -544,6 +637,14 @@ export function TeamSection() {
                             <p className="text-sm text-gray-600">
                               {member.email}
                             </p>
+                            {member.role !== "admin" && (
+                              <button
+                                onClick={() => removeMember(member.id)}
+                                className="text-xs text-red-600 hover:text-red-800 transition-colors mt-1"
+                              >
+                                Remove member
+                              </button>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -555,7 +656,7 @@ export function TeamSection() {
                                 ? "default"
                                 : "secondary"
                             }
-                            className="flex items-center space-x-1"
+                            className="flex items-center space-x-1 ml-2"
                           >
                             {member.role === "admin" && (
                               <Crown className="h-3 w-3" />

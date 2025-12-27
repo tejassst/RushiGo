@@ -18,6 +18,25 @@ class DeadlineBase(BaseModel):
     priority: PriorityLevel = Field(default=PriorityLevel.medium)
     estimated_hours: Optional[float] = Field(default=0.0, ge=0.0)
 
+    @validator('date', pre=True)
+    def parse_date(cls, v):
+        """Parse date string as naive datetime (local time, not UTC)"""
+        if isinstance(v, str):
+            # Remove any timezone info and parse as naive datetime
+            # This treats the input as local time, not UTC
+            v = v.replace('Z', '').replace('+00:00', '')
+            if 'T' in v:
+                # Has time component
+                try:
+                    return datetime.fromisoformat(v)
+                except ValueError:
+                    # Fallback for various formats
+                    return datetime.strptime(v, '%Y-%m-%dT%H:%M:%S')
+            else:
+                # Date only, add midnight
+                return datetime.fromisoformat(v + 'T00:00:00')
+        return v
+
     @validator('estimated_hours')
     def validate_hours(cls, v):
         if v is not None and v < 0:

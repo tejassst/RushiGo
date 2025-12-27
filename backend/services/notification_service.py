@@ -109,16 +109,15 @@ class NotificationService:
         try:
             now = datetime.now()
             
-            # Find deadlines approaching in the next 3 days (not completed)
-            # Use joinedload to eager load the user relationship
+            # Get approaching deadlines (3 days, 1 day, same day, or 1 hour)
             approaching_deadlines = db.query(Deadline).options(
                 joinedload(Deadline.user)
             ).join(User).filter(
                 and_(
-                    Deadline.completed.is_(False),  # Proper SQLAlchemy boolean check
-                    Deadline.date > now,
+                    Deadline.completed.is_(False),
+                    Deadline.date >= now,
                     Deadline.date <= now + timedelta(days=3),
-                    User.is_active.is_(True)  # Proper SQLAlchemy boolean check
+                    User.is_active.is_(True)
                 )
             ).all()
             
@@ -143,7 +142,36 @@ class NotificationService:
                     logger.warning(f"User not found for deadline {deadline.id}")
                     continue
                 
-                # Check if we already sent a notification for this deadline today
+                # Calculate time until deadline
+                time_until = deadline.date - now
+                hours_until = time_until.total_seconds() / 3600
+                days_until = time_until.days
+                
+                # Determine if we should send notification (1 hour, same day, 1 day, or 3 days)
+                should_notify = False
+                notification_period = ""
+                
+                if 0 < hours_until <= 1:
+                    # 1 hour before
+                    notification_period = "1_hour"
+                    should_notify = True
+                elif days_until == 0:
+                    # Same day
+                    notification_period = "same_day"
+                    should_notify = True
+                elif days_until == 1:
+                    # 1 day before
+                    notification_period = "1_day"
+                    should_notify = True
+                elif days_until == 3:
+                    # 3 days before
+                    notification_period = "3_days"
+                    should_notify = True
+                
+                if not should_notify:
+                    continue
+                
+                # Check if we already sent a notification for this deadline today with this period
                 today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 deadline_title_str = str(getattr(deadline, 'title', '') or '')
                 
@@ -151,17 +179,18 @@ class NotificationService:
                     and_(
                         Notification.user_id == deadline.user_id,
                         Notification.message.contains(deadline_title_str),
+                        Notification.message.contains(notification_period),
                         Notification.created_at >= today_start,
-                        Notification.sent.is_(True)  # Proper SQLAlchemy boolean check
+                        Notification.sent.is_(True)
                     )
                 ).first()
                 
                 if existing_notification is None:
                     if self.send_deadline_notification(deadline.user, deadline, "approaching"):
-                        # Log the notification
+                        # Log the notification with the period to enable deduplication
                         notification = Notification(
                             user_id=deadline.user_id,
-                            message=f"Approaching deadline notification sent for: {deadline_title_str}",
+                            message=f"Approaching deadline notification sent for: {deadline_title_str} ({notification_period})",
                             sent=True,
                             created_at=datetime.now()
                         )
@@ -186,7 +215,7 @@ class NotificationService:
                 existing_overdue_notification = db.query(Notification).filter(
                     and_(
                         Notification.user_id == deadline.user_id,
-                        Notification.message.contains(f"Overdue: {deadline_title_str}"),
+                        Notification.message.contains(f"Overdue deadline notification sent for: {deadline_title_str}"),
                         Notification.created_at >= today_start,
                         Notification.sent.is_(True)  # Proper SQLAlchemy boolean check
                     )
@@ -229,6 +258,27 @@ class NotificationService:
                 return False
             
             now = datetime.now()
+            
+            # Check if digest was already sent today
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_date_str = now.strftime('%Y-%m-%d')
+            
+            logger.info(f"Checking for existing digest for user {user_id} on {today_date_str}")
+            
+            existing_digest = db.query(Notification).filter(
+                and_(
+                    Notification.user_id == user_id,
+                    Notification.message.contains(f"Daily digest sent for {today_date_str}"),
+                    Notification.created_at >= today_start,
+                    Notification.sent.is_(True)
+                )
+            ).first()
+            
+            if existing_digest is not None:
+                logger.info(f"Daily digest already sent to user {user_id} today at {existing_digest.created_at}")
+                return True  # Already sent, consider it a success
+            
+            logger.info(f"No existing digest found, will send new digest to user {user_id}")
             
             # Get upcoming deadlines (next 7 days)
             upcoming_deadlines = db.query(Deadline).filter(

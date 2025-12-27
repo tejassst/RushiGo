@@ -17,6 +17,8 @@ class NotificationScheduler:
         self.running = False
         self.task: Optional[asyncio.Task] = None
         self.thread: Optional[threading.Thread] = None
+        self.last_deadline_check = None  # Track last deadline check time
+        self.last_digest_check = None  # Track last digest check time
     
     def start(self):
         """Start the notification scheduler"""
@@ -55,17 +57,22 @@ class NotificationScheduler:
         while self.running:
             try:
                 now = datetime.now()
+                current_minute = now.replace(second=0, microsecond=0)
                 
-                # Check every hour for approaching/overdue deadlines
-                if now.minute == 0:  # Run at the top of every hour
-                    logger.info("Running hourly deadline notification check")
+                # Check every 5 minutes for approaching/overdue deadlines
+                # Only run if we haven't run in this 5-minute window yet
+                if now.minute % 5 == 0 and self.last_deadline_check != current_minute:
+                    logger.info(f"Running deadline notification check at {now.strftime('%H:%M:%S')}")
+                    self.last_deadline_check = current_minute
                     notification_service = get_notification_service()
                     stats = notification_service.check_and_send_deadline_notifications()
                     logger.info(f"Notification stats: {stats}")
                 
                 # Send daily digest at 8 AM
-                if now.hour == 8 and now.minute == 0:
-                    logger.info("Running daily digest notifications")
+                # Only run if we haven't run today yet
+                if now.hour == 8 and now.minute == 0 and self.last_digest_check != current_minute:
+                    logger.info(f"Running daily digest notifications at {now.strftime('%H:%M:%S')}")
+                    self.last_digest_check = current_minute
                     await self._send_daily_digests()
                 
                 # Sleep for 60 seconds before next check

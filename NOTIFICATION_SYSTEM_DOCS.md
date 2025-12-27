@@ -2,53 +2,75 @@
 
 ## 📧 Overview
 
-RushiGo's email notification system automatically sends deadline reminders to users using Mailgun. The system includes beautiful HTML email templates, automatic scheduling, and comprehensive logging.
+RushiGo's email notification system automatically sends deadline reminders to users using **Gmail API**. The system includes beautiful HTML email templates, automatic scheduling, and comprehensive logging.
 
 ## 🚀 Features
 
 ### ✅ **Automatic Notifications**
+
 - **Deadline Reminders**: 3 days, 1 day, and same-day notifications
 - **Daily Digest**: Morning summary of upcoming and overdue deadlines (8 AM)
 - **Overdue Alerts**: Notifications for missed deadlines
 - **Smart Deduplication**: Prevents duplicate notifications
 
 ### ✅ **Email Templates**
+
 - **Responsive Design**: Mobile-friendly HTML templates
 - **Professional Styling**: Clean, modern design with RushiGo branding
 - **Multiple Formats**: Both HTML and plain text versions
 - **Personalization**: User names, deadline details, and course information
 
 ### ✅ **Background Processing**
+
 - **Non-blocking**: Runs in background thread
 - **Automatic Scheduling**: Hourly deadline checks, daily digest at 8 AM
 - **Error Handling**: Comprehensive error logging and recovery
 - **Database Logging**: All notifications tracked in database
 
+### ✅ **Gmail Integration**
+
+- **Free & Reliable**: Direct Gmail API integration
+- **No Limits**: Send to any email address (no sandbox restrictions)
+- **OAuth2 Security**: Secure authentication with Google
+- **Auto Token Refresh**: Seamless re-authentication
+
 ## 🛠️ Technical Architecture
 
 ### **Core Components**
 
-1. **NotificationService** (`services/notification_service.py`)
+1. **GmailService** (`services/gmail_service.py`)
+
+   - Gmail API integration
+   - OAuth2 authentication handling
+   - Email sending with HTML/text support
+   - Automatic token refresh
+
+2. **NotificationService** (`services/notification_service.py`)
+
    - Main service for sending notifications
    - Handles deadline checking and email generation
    - Database interaction and logging
 
-2. **EmailTemplates** (`services/email_templates.py`)
+3. **EmailTemplates** (`services/email_templates.py`)
+
    - HTML and text email template generation
    - Responsive design with inline CSS
    - Template customization support
 
-3. **Scheduler** (`services/scheduler.py`)
+4. **Scheduler** (`services/scheduler.py`)
+
    - Background task scheduling
    - Automatic deadline monitoring
    - Daily digest distribution
 
-4. **API Endpoints** (`routers/notifications.py`)
+5. **API Endpoints** (`routers/notifications.py`)
    - Manual notification triggers
    - Testing endpoints
    - Statistics and monitoring
 
 ### **Database Models**
+
+````
 
 - **User**: User information and preferences
 - **Deadline**: Deadline details with completion status
@@ -70,7 +92,7 @@ DATABASE_URL=postgresql://user:pass@host:port/database
 # Application
 DEBUG=True
 API_PREFIX=/api
-```
+````
 
 ### **Required Dependencies**
 
@@ -85,6 +107,7 @@ psycopg2-binary==2.9.9
 ## 📋 API Reference
 
 ### **Base URL**
+
 ```
 http://localhost:8000/api/notifications
 ```
@@ -92,9 +115,11 @@ http://localhost:8000/api/notifications
 ### **Endpoints**
 
 #### **POST /send-deadline-notifications**
+
 Manually trigger deadline notification check for all users.
 
 **Response:**
+
 ```json
 {
   "message": "Notification check completed",
@@ -107,12 +132,15 @@ Manually trigger deadline notification check for all users.
 ```
 
 #### **POST /send-test-notification/{user_id}**
+
 Send test notification to specific user.
 
 **Parameters:**
+
 - `user_id` (int): Target user ID
 
 **Response:**
+
 ```json
 {
   "message": "Test notification sent to user@example.com"
@@ -120,12 +148,15 @@ Send test notification to specific user.
 ```
 
 #### **POST /send-daily-digest/{user_id}**
+
 Send daily digest to specific user.
 
 **Parameters:**
+
 - `user_id` (int): Target user ID
 
 **Response:**
+
 ```json
 {
   "message": "Daily digest sent to user 123"
@@ -133,9 +164,11 @@ Send daily digest to specific user.
 ```
 
 #### **GET /statistics**
+
 Get notification system statistics.
 
 **Response:**
+
 ```json
 {
   "total_notifications": 150,
@@ -148,19 +181,21 @@ Get notification system statistics.
 
 ### **Deadline Reminder Schedule**
 
-| Time Before Deadline | Notification Type | Frequency |
-|-----------------------|-------------------|-----------|
-| 3 days | Approaching | Once |
-| 1 day | Approaching | Once |
-| Same day (0-24 hours) | Approaching | Once |
-| After deadline | Overdue | Once per day |
+| Time Before Deadline  | Notification Type | Frequency    |
+| --------------------- | ----------------- | ------------ |
+| 3 days                | Approaching       | Once         |
+| 1 day                 | Approaching       | Once         |
+| Same day (0-24 hours) | Approaching       | Once         |
+| After deadline        | Overdue           | Once per day |
 
 ### **Daily Digest Schedule**
+
 - **Time**: 8:00 AM daily
 - **Content**: Upcoming deadlines (next 7 days) + overdue deadlines
 - **Recipients**: All active users with deadlines
 
 ### **Deduplication Logic**
+
 - Tracks sent notifications in database
 - Prevents duplicate notifications for same deadline on same day
 - Resets daily for overdue notifications
@@ -168,6 +203,7 @@ Get notification system statistics.
 ## 📧 Email Templates
 
 ### **Approaching Deadline**
+
 ```
 Subject: ⏰ Deadline Reminder: [Deadline Title]
 
@@ -180,6 +216,7 @@ Content:
 ```
 
 ### **Overdue Deadline**
+
 ```
 Subject: ⚠️ Overdue: [Deadline Title]
 
@@ -191,6 +228,7 @@ Content:
 ```
 
 ### **Daily Digest**
+
 ```
 Subject: 📊 Daily Deadline Digest - [Date]
 
@@ -206,17 +244,20 @@ Content:
 ### **Manual Testing**
 
 #### **1. Test Mailgun Connection**
+
 ```bash
 cd backend
 python scripts/simple_mailgun_test.py
 ```
 
 #### **2. Test Full Notification System**
+
 ```bash
 python scripts/test_mailgun.py
 ```
 
 #### **3. Test API Endpoints**
+
 ```bash
 # Test deadline notifications
 curl -X POST "http://localhost:8000/api/notifications/send-deadline-notifications"
@@ -229,7 +270,9 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ```
 
 ### **Test Email Recipients**
+
 For sandbox domain, add authorized recipients in Mailgun dashboard:
+
 - Go to **Sending** → **Authorized Recipients**
 - Add and verify test email addresses
 
@@ -238,22 +281,26 @@ For sandbox domain, add authorized recipients in Mailgun dashboard:
 ### **Development Setup**
 
 1. **Install Dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
 2. **Configure Environment**
+
 ```bash
 cp .env.example .env
 # Edit .env with your Mailgun credentials
 ```
 
 3. **Initialize Database**
+
 ```bash
 python scripts/init_db.py
 ```
 
 4. **Start Server**
+
 ```bash
 python main.py
 ```
@@ -261,11 +308,13 @@ python main.py
 ### **Production Deployment**
 
 1. **Environment Variables**
+
    - Set production Mailgun domain
    - Use production database URL
    - Set `DEBUG=False`
 
 2. **Email Domain**
+
    - Upgrade from sandbox to verified domain
    - Configure DNS records for domain verification
    - Remove authorized recipient restrictions
@@ -320,46 +369,50 @@ Deadline.date <= now + timedelta(days=3)  # Change days value
 ### **Database Queries**
 
 #### **Notification Statistics**
+
 ```sql
 -- Total notifications sent
 SELECT COUNT(*) FROM notifications WHERE sent = true;
 
 -- Notifications by type
-SELECT message, COUNT(*) 
-FROM notifications 
-WHERE sent = true 
+SELECT message, COUNT(*)
+FROM notifications
+WHERE sent = true
 GROUP BY message;
 
 -- Daily notification volume
-SELECT DATE(created_at), COUNT(*) 
-FROM notifications 
-WHERE sent = true 
+SELECT DATE(created_at), COUNT(*)
+FROM notifications
+WHERE sent = true
 GROUP BY DATE(created_at);
 ```
 
 #### **User Engagement**
+
 ```sql
 -- Users receiving notifications
-SELECT COUNT(DISTINCT user_id) 
-FROM notifications 
+SELECT COUNT(DISTINCT user_id)
+FROM notifications
 WHERE sent = true;
 
 -- Most active users
 SELECT user_id, COUNT(*) as notification_count
-FROM notifications 
-WHERE sent = true 
-GROUP BY user_id 
+FROM notifications
+WHERE sent = true
+GROUP BY user_id
 ORDER BY notification_count DESC;
 ```
 
 ### **System Health Checks**
 
 1. **Email Delivery Rate**
+
    - Monitor successful vs failed notifications
    - Track Mailgun delivery statistics
    - Set up alerts for high failure rates
 
 2. **Scheduler Health**
+
    - Verify hourly notifications are running
    - Check daily digest delivery
    - Monitor background process status
@@ -374,9 +427,10 @@ ORDER BY notification_count DESC;
 ### **Common Issues**
 
 #### **Email Not Sending (401 Error)**
+
 ```
 Problem: Invalid API key
-Solution: 
+Solution:
 1. Check Mailgun dashboard → Settings → API Keys
 2. Copy Private API key (NOT Public)
 3. Update MAILGUN_API_KEY in .env
@@ -384,6 +438,7 @@ Solution:
 ```
 
 #### **Email Not Received (400 Error)**
+
 ```
 Problem: Unauthorized recipient (sandbox domain)
 Solution:
@@ -394,6 +449,7 @@ Solution:
 ```
 
 #### **Scheduler Not Running**
+
 ```
 Problem: Background notifications not working
 Solution:
@@ -404,6 +460,7 @@ Solution:
 ```
 
 #### **Database Connection Issues**
+
 ```
 Problem: Notification logging fails
 Solution:
@@ -434,11 +491,13 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ### **Regular Tasks**
 
 1. **Weekly**
+
    - Review notification statistics
    - Check email delivery rates
    - Monitor error logs
 
 2. **Monthly**
+
    - Archive old notifications
    - Update email templates if needed
    - Review user engagement metrics
@@ -451,11 +510,13 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ### **Scaling Considerations**
 
 1. **High Volume**
+
    - Implement email queuing system
    - Add rate limiting for API endpoints
    - Consider email service alternatives
 
 2. **Performance**
+
    - Database indexing on notification queries
    - Caching for frequent operations
    - Background job processing
@@ -468,16 +529,19 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ## 🔐 Security
 
 ### **Data Protection**
+
 - Environment variables for sensitive data
 - API key rotation procedures
 - Database encryption at rest
 
 ### **Email Security**
+
 - SPF/DKIM records for domain verification
 - Secure email content (no sensitive data)
 - Rate limiting to prevent abuse
 
 ### **Access Control**
+
 - API endpoint authentication
 - User-specific notification access
 - Admin-only statistics endpoints
@@ -487,6 +551,7 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 ## 📞 Support
 
 For issues or questions:
+
 1. Check troubleshooting section above
 2. Review error logs in `logs/` directory
 3. Test individual components with provided scripts

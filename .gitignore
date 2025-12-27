@@ -4,6 +4,12 @@
 .env.production
 .env.staging
 
+# Gmail API credentials
+credentials.json
+token.json
+backend/credentials.json
+backend/token.json
+
 # Python
 __pycache__/
 *.py[cod]

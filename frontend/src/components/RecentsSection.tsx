@@ -16,6 +16,7 @@ import { useDeadlines } from "../hooks/useDeadlines";
 import {
   Deadline as APIDeadline,
   CreateDeadlineRequest,
+  apiClient,
 } from "../services/api";
 
 // Create a local Deadline type that matches what DeadlineCard expects
@@ -93,12 +94,22 @@ export function RecentsSection() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this deadline?")) {
-      try {
-        await deleteDeadline(id);
-      } catch (error) {
-        console.error("Failed to delete deadline:", error);
-      }
+    try {
+      await deleteDeadline(id);
+    } catch (error) {
+      console.error("Failed to delete deadline:", error);
+    }
+  };
+
+  const handleUpdate = async (updatedDeadline: APIDeadline) => {
+    try {
+      await apiClient.updateDeadline(updatedDeadline.id, {
+        completed: updatedDeadline.completed,
+      });
+      // Refresh the deadlines list
+      await fetchDeadlines();
+    } catch (error) {
+      console.error("Failed to update deadline:", error);
     }
   };
 
@@ -108,9 +119,23 @@ export function RecentsSection() {
 
     setIsCreating(true);
     try {
+      // datetime-local gives us "2024-01-15T14:30" format (local time)
+      // We need to keep it as local time, not convert to UTC
+      // Just append seconds and timezone offset to make it ISO compliant
+      let deadlineDate: string;
+
+      if (formData.date.includes("T")) {
+        // Has time component: "2024-01-15T14:30"
+        // Append ":00" for seconds to make it ISO-like, but keep as local time string
+        deadlineDate = formData.date + ":00";
+      } else {
+        // No time component, add midnight
+        deadlineDate = formData.date + "T00:00:00";
+      }
+
       await createDeadline({
         ...formData,
-        date: new Date(formData.date).toISOString(),
+        date: deadlineDate,
       });
       // Reset form
       setFormData({
@@ -300,7 +325,7 @@ export function RecentsSection() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Due Date *
+                  Due Date & Time *
                 </label>
                 <input
                   type="datetime-local"
@@ -308,6 +333,7 @@ export function RecentsSection() {
                   value={formData.date}
                   onChange={(e) => handleFormChange("date", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  step="60"
                 />
               </div>
 
@@ -408,9 +434,7 @@ export function RecentsSection() {
             <div key={transformedDeadline.id} className="flex justify-center">
               <DeadlineCard
                 deadline={originalDeadline}
-                onUpdate={() => {
-                  // Handle update - this will be handled by the hook automatically
-                }}
+                onUpdate={handleUpdate}
                 onDelete={handleDelete}
               />
             </div>

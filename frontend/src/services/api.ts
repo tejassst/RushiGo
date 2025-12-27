@@ -64,6 +64,7 @@ export interface CreateTeamRequest {
 }
 
 export interface TeamMember {
+  id: number;
   email: string;
   username: string;
   role: string;
@@ -72,6 +73,10 @@ export interface TeamMember {
 export interface InviteMemberRequest {
   user_email: string;
   role: string;
+}
+
+export interface DeleteTeam {
+  message: string;
 }
 
 export interface TeamDeadline extends Deadline {
@@ -237,10 +242,16 @@ export class ApiClient {
     return this.request<TeamMember[]>(`/teams/${teamId}/members`);
   }
 
-  async inviteTeamMember(teamId: number, invite: InviteMemberRequest): Promise<{ message: string }> {
+  async inviteTeamMember(teamId: number, data: InviteMemberRequest): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/teams/${teamId}/invite`, {
       method: 'POST',
-      body: JSON.stringify(invite),
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTeam(teamId: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/teams/${teamId}`, {
+      method: 'DELETE',
     });
   }
 

@@ -14,9 +14,13 @@ import {
 
 interface HomePageProps {
   onNavigate: (section: "demo" | "upload") => void;
+  isAuthenticated?: boolean;
 }
 
-export function HomePage({ onNavigate }: HomePageProps) {
+export function HomePage({
+  onNavigate,
+  isAuthenticated = false,
+}: HomePageProps) {
   const features = [
     {
       icon: Zap,
@@ -51,7 +55,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <div className="max-w-7xl mx-auto text-center">
           {/* Badge */}
           <Badge className="mb-8 px-4 py-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border-purple-200">
-            ✨ Revolutionary AI Deadline Tracking
+            Revolutionary AI Deadline Tracking
           </Badge>
 
           {/* Main heading */}
@@ -65,20 +69,21 @@ export function HomePage({ onNavigate }: HomePageProps) {
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed">
             Upload any document and let our AI instantly extract all deadlines,
-            dates, and important milestones. Stay organized with our intuitive
-            swipe-to-manage interface.
+            dates, and important milestones.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">
-            <Button
-              size="lg"
-              onClick={() => onNavigate("demo")}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all"
-            >
-              Try Demo
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            {!isAuthenticated && (
+              <Button
+                size="lg"
+                onClick={() => onNavigate("demo")}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all"
+              >
+                Try Demo
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            )}
 
             <Button
               variant="outline"
@@ -256,14 +261,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
               management
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button
-                size="lg"
-                onClick={() => onNavigate("demo")}
-                className="bg-white text-purple-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-xl"
-              >
-                Try Free Demo
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              {!isAuthenticated && (
+                <Button
+                  size="lg"
+                  onClick={() => onNavigate("demo")}
+                  className="bg-white text-purple-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-xl"
+                >
+                  Try Free Demo
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="lg"
