@@ -12,6 +12,9 @@ import {
 import { useDeadlines } from "../hooks/useDeadlines";
 import { useToast } from "../hooks/useToast";
 
+// Get API base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
 export function UploadSection() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -109,7 +112,7 @@ export function UploadSection() {
       formData.append("file", uploadedFile);
 
       const response = await fetch(
-        "http://localhost:8000/api/deadlines/scan-document",
+        `${API_BASE_URL}/deadlines/scan-document`,
         {
           method: "POST",
           headers: {
