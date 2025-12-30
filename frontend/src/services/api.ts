@@ -1,4 +1,9 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+// Debug: Log the API URL being used
+console.log('🚀 API_BASE_URL:', API_BASE_URL);
+console.log('🔍 import.meta.env.VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('📦 All env vars:', import.meta.env);
 
 export interface LoginRequest {
   username: string; // FastAPI OAuth2PasswordRequestForm expects 'username' field
