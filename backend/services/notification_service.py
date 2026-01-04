@@ -25,7 +25,7 @@ class NotificationService:
         """Get database session"""
         return SessionLocal()
     
-    def send_deadline_notification(self, user: User, deadline: Deadline, notification_type: str = "approaching") -> bool:
+    def send_deadline_notification(self, user: User, deadline: Deadline, notification_type: str = "approaching", time_label: Optional[str] = None) -> bool:
         """Send email notification for a specific deadline"""
         try:
             now = datetime.now(timezone.utc)
@@ -44,23 +44,28 @@ class NotificationService:
             deadline_course = str(deadline_course)
             
             if notification_type == "approaching":
-                days_left = (deadline_date - now).days
-                if days_left < 0:
-                    days_left = 0
+                # Use time_label if provided, otherwise calculate days left
+                if time_label:
+                    time_description = time_label
+                else:
+                    days_left = (deadline_date - now).days
+                    if days_left < 0:
+                        days_left = 0
+                    time_description = f"{days_left} day{'s' if days_left != 1 else ''}"
                 
-                subject = f"⏰ Deadline Reminder: {deadline_title}"
+                subject = f"⏰ Deadline in {time_description}: {deadline_title}"
                 text_body = self.email_templates.deadline_approaching_text(
                     user_name=user_name,
                     deadline_title=deadline_title,
                     deadline_date=deadline_date,
-                    days_left=days_left,
+                    days_left=(deadline_date - now).days,
                     course=deadline_course
                 )
                 html_body = self.email_templates.deadline_approaching_html(
                     user_name=user_name,
                     deadline_title=deadline_title,
                     deadline_date=deadline_date,
-                    days_left=days_left,
+                    days_left=(deadline_date - now).days,
                     course=deadline_course
                 )
                 
@@ -109,7 +114,7 @@ class NotificationService:
         try:
             now = datetime.now(timezone.utc)
             
-            # Get approaching deadlines (3 days, 1 day, same day, or 1 hour)
+            # Get approaching deadlines (within 3 days)
             approaching_deadlines = db.query(Deadline).options(
                 joinedload(Deadline.user)
             ).join(User).filter(
@@ -126,9 +131,9 @@ class NotificationService:
                 joinedload(Deadline.user)
             ).join(User).filter(
                 and_(
-                    Deadline.completed.is_(False),  # Proper SQLAlchemy boolean check
+                    Deadline.completed.is_(False),
                     Deadline.date < now,
-                    User.is_active.is_(True)  # Proper SQLAlchemy boolean check
+                    User.is_active.is_(True)
                 )
             ).all()
             
@@ -145,59 +150,63 @@ class NotificationService:
                 # Calculate time until deadline
                 time_until = deadline.date - now
                 hours_until = time_until.total_seconds() / 3600
-                days_until = time_until.days
                 
-                # Determine if we should send notification (1 hour, same day, 1 day, or 3 days)
-                should_notify = False
-                notification_period = ""
+                # Determine notification periods that should be sent
+                # We check if we're within a 10-minute window of each threshold
+                notification_periods = []
                 
-                if 0 < hours_until <= 1:
-                    # 1 hour before
-                    notification_period = "1_hour"
-                    should_notify = True
-                elif days_until == 0:
-                    # Same day
-                    notification_period = "same_day"
-                    should_notify = True
-                elif days_until == 1:
-                    # 1 day before
-                    notification_period = "1_day"
-                    should_notify = True
-                elif days_until == 3:
-                    # 3 days before
-                    notification_period = "3_days"
-                    should_notify = True
+                # 3 days before (between 71.5 and 72.5 hours before)
+                if 71.5 <= hours_until <= 72.5:
+                    notification_periods.append("3_days")
                 
-                if not should_notify:
+                # 1 day before (between 23.5 and 24.5 hours before)
+                elif 23.5 <= hours_until <= 24.5:
+                    notification_periods.append("1_day")
+                
+                # 1 hour before (between 0.92 and 1.08 hours before - ~55 to 65 minutes)
+                elif 0.92 <= hours_until <= 1.08:
+                    notification_periods.append("1_hour")
+                
+                # If no specific threshold matched, skip this deadline
+                if not notification_periods:
                     continue
                 
-                # Check if we already sent a notification for this deadline today with this period
-                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-                deadline_title_str = str(getattr(deadline, 'title', '') or '')
-                
-                existing_notification = db.query(Notification).filter(
-                    and_(
-                        Notification.user_id == deadline.user_id,
-                        Notification.message.contains(deadline_title_str),
-                        Notification.message.contains(notification_period),
-                        Notification.created_at >= today_start,
-                        Notification.sent.is_(True)
-                    )
-                ).first()
-                
-                if existing_notification is None:
-                    if self.send_deadline_notification(deadline.user, deadline, "approaching"):
-                        # Log the notification with the period to enable deduplication
-                        notification = Notification(
-                            user_id=deadline.user_id,
-                            message=f"Approaching deadline notification sent for: {deadline_title_str} ({notification_period})",
-                            sent=True,
-                            created_at=datetime.now(timezone.utc)
+                # Check each notification period
+                for notification_period in notification_periods:
+                    deadline_title_str = str(getattr(deadline, 'title', '') or '')
+                    
+                    # Check if we already sent this specific notification (ever, not just today)
+                    existing_notification = db.query(Notification).filter(
+                        and_(
+                            Notification.user_id == deadline.user_id,
+                            Notification.message.contains(deadline_title_str),
+                            Notification.message.contains(notification_period),
+                            Notification.sent.is_(True)
                         )
-                        db.add(notification)
-                        stats["approaching_sent"] += 1
-                    else:
-                        stats["errors"] += 1
+                    ).first()
+                    
+                    if existing_notification is None:
+                        # Determine how long until deadline for email content
+                        if notification_period == "3_days":
+                            period_label = "3 days"
+                        elif notification_period == "1_day":
+                            period_label = "1 day"
+                        else:
+                            period_label = "1 hour"
+                        
+                        if self.send_deadline_notification(deadline.user, deadline, "approaching", period_label):
+                            # Log the notification with the period to enable deduplication
+                            notification = Notification(
+                                user_id=deadline.user_id,
+                                message=f"Approaching deadline notification sent for: {deadline_title_str} ({notification_period})",
+                                sent=True,
+                                created_at=datetime.now(timezone.utc)
+                            )
+                            db.add(notification)
+                            stats["approaching_sent"] += 1
+                            logger.info(f"Sent {period_label} notification for deadline: {deadline_title_str}")
+                        else:
+                            stats["errors"] += 1
             
             # Send overdue deadline notifications (only once per day)
             for deadline in overdue_deadlines:

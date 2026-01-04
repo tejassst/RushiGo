@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: rushigo-backend
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: DEBUG
+        value: "False"
+      - key: FROM_EMAIL
+        value: "reminder.rushigo@gmail.com"
+      - key: GMAIL_CREDENTIALS_PATH
+        value: "credentials.json"
+      - key: GMAIL_TOKEN_PATH
+        value: "token.json"
+      - key: PYTHON_VERSION
+        value: "3.13.1"
+    autoDeploy: true

@@ -13,7 +13,8 @@ import { useDeadlines } from "../hooks/useDeadlines";
 import { useToast } from "../hooks/useToast";
 
 // Get API base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 export function UploadSection() {
   const [isDragging, setIsDragging] = useState(false);
@@ -111,16 +112,13 @@ export function UploadSection() {
       const formData = new FormData();
       formData.append("file", uploadedFile);
 
-      const response = await fetch(
-        `${API_BASE_URL}/deadlines/scan-document`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-          body: formData,
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/deadlines/scan-document`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: formData,
+      });
 
       if (!response.ok) {
         throw new Error("Failed to process document");

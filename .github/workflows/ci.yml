@@ -1,0 +1,96 @@
+name: RushiGo CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Check code formatting
+      run: |
+        cd backend
+        pip install black
+        black --check .
+    
+    - name: Run linting
+      run: |
+        cd backend
+        pip install pylint
+        pylint --disable=all --enable=E,F *.py routers/*.py services/*.py || true
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: frontend/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run linting
+      run: |
+        cd frontend
+        npm run lint
+    
+    - name: Build
+      run: |
+        cd frontend
+        npm run build
+    
+    - name: Check build size
+      run: |
+        cd frontend
+        du -sh dist/
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        severity: 'CRITICAL,HIGH'

@@ -389,7 +389,35 @@ curl -X GET "http://localhost:8000/health"  # API
 - Write tests for new features
 - Update documentation
 
-## 📄 License
+## � Deployment
+
+RushiGo is ready to deploy to production! See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment instructions.
+
+### **Quick Deploy**
+
+**Backend** (Render):
+
+1. Push code to GitHub
+2. Connect repository to Render
+3. Set environment variables
+4. Deploy!
+
+**Frontend** (Vercel):
+
+1. Push code to GitHub
+2. Connect repository to Vercel
+3. Set `VITE_API_URL` environment variable
+4. Deploy!
+
+**Required Services**:
+
+- PostgreSQL database (free on Render)
+- Gmail API credentials
+- Gemini API key
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for step-by-step guide with screenshots and troubleshooting.
+
+## �📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -397,21 +425,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **FastAPI** - Modern, fast web framework for building APIs
 - **SQLAlchemy** - Python SQL toolkit and ORM
-- **Mailgun** - Email delivery service
-- **Supabase** - Open source Firebase alternative
+- **Gmail API** - Email delivery service
+- **Supabase** - Open source Firebase alternative (database option)
 - **Pydantic** - Data validation using Python type hints
+- **React + Vite** - Modern frontend framework and build tool
+- **Tailwind CSS** - Utility-first CSS framework
 
 ## 📞 Support
 
 - **Documentation**: See `docs/` folder for detailed guides
-- **API Reference**: Visit `http://localhost:8000/docs`
+- **Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
+- **API Reference**: Visit `http://localhost:8000/api/docs`
 - **Issues**: Create GitHub issue for bugs or feature requests
-- **Email**: Contact team for support
 
 ---
 
-**Status**: **Production Ready**  
+**Status**: **✅ Production Ready**  
 **Version**: 1.0.0  
-**Last Updated**: 2024
+**Last Updated**: December 2025
 
 Made with ❤️ for students who want to stay on top of their academic goals.
