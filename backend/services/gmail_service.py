@@ -150,6 +150,7 @@ class GmailService:
 
 # Global instance (lazy initialization)
 _gmail_service: Optional[GmailService] = None
+_gmail_service_paths: Optional[tuple] = None
 
 
 def get_gmail_service(credentials_path: str = "credentials.json", token_path: str = "token.json") -> GmailService:
@@ -163,7 +164,12 @@ def get_gmail_service(credentials_path: str = "credentials.json", token_path: st
     Returns:
         GmailService: The global Gmail service instance
     """
-    global _gmail_service
-    if _gmail_service is None:
+    global _gmail_service, _gmail_service_paths
+    
+    # Recreate service if paths have changed or service doesn't exist
+    current_paths = (credentials_path, token_path)
+    if _gmail_service is None or _gmail_service_paths != current_paths:
         _gmail_service = GmailService(credentials_path, token_path)
+        _gmail_service_paths = current_paths
+    
     return _gmail_service
