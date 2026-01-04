@@ -13,6 +13,7 @@ import logging
 from typing import Optional
 
 from services.gmail_service import get_gmail_service
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,10 @@ def send_email(to_email: str, subject: str, text: str, html: Optional[str] = Non
         Exception: If email sending fails
     """
     try:
-        gmail_service = get_gmail_service()
+        gmail_service = get_gmail_service(
+            credentials_path=settings.GMAIL_CREDENTIALS_PATH,
+            token_path=settings.GMAIL_TOKEN_PATH
+        )
         result = gmail_service.send_email(
             to_email=to_email,
             subject=subject,
