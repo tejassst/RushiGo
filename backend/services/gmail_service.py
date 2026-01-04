@@ -32,8 +32,8 @@ class GmailService:
             credentials_path: Path to OAuth2 credentials file from Google Cloud Console
             token_path: Path where to store/load the authentication token
         """
-        self.credentials_path = Path(credentials_path)
-        self.token_path = Path(token_path)
+        self.credentials_path = Path(credentials_path.strip())
+        self.token_path = Path(token_path.strip())
         self.service: Optional[Any] = None  # Gmail API service object
         self._authenticate()
     
@@ -55,26 +55,27 @@ class GmailService:
                 try:
                     creds.refresh(Request())
                     logger.info("Refreshed Gmail credentials")
+                    # Save the refreshed credentials
+                    with open(self.token_path, 'w') as token:
+                        token.write(creds.to_json())
                 except Exception as e:
-                    logger.warning(f"Failed to refresh credentials: {e}")
-                    creds = None
+                    logger.error(f"Failed to refresh credentials: {e}")
+                    raise RuntimeError(
+                        f"Gmail token expired and refresh failed: {e}. "
+                        "Please regenerate token.json locally and re-upload to Render Secret Files."
+                    )
             
-            if not creds:
+            if not creds or not creds.valid:
                 if not self.credentials_path.exists():
                     raise FileNotFoundError(
                         f"Gmail credentials file not found at {self.credentials_path}. "
                         "Please download OAuth2 credentials from Google Cloud Console."
                     )
                 
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    str(self.credentials_path), SCOPES
+                raise RuntimeError(
+                    "Gmail token is invalid or missing and cannot authenticate in production environment. "
+                    "Please generate token.json locally using the refresh_token.py script and upload to Render Secret Files."
                 )
-                creds = flow.run_local_server(port=0)
-                logger.info("Successfully authenticated with Gmail")
-            
-            # Save the credentials for the next run
-            with open(self.token_path, 'w') as token:
-                token.write(creds.to_json())
         
         # Build the service
         try:
