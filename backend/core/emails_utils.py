@@ -37,9 +37,14 @@ def send_email(to_email: str, subject: str, text: str, html: Optional[str] = Non
         Exception: If email sending fails
     """
     try:
+        creds_path = settings.GMAIL_CREDENTIALS_PATH
+        token_path = settings.GMAIL_TOKEN_PATH
+        logger.info(f"Using Gmail credentials from: {creds_path}")
+        logger.info(f"Using Gmail token from: {token_path}")
+        
         gmail_service = get_gmail_service(
-            credentials_path=settings.GMAIL_CREDENTIALS_PATH,
-            token_path=settings.GMAIL_TOKEN_PATH
+            credentials_path=creds_path,
+            token_path=token_path
         )
         result = gmail_service.send_email(
             to_email=to_email,

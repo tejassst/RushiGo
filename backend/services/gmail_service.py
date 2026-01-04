@@ -168,8 +168,14 @@ def get_gmail_service(credentials_path: str = "credentials.json", token_path: st
     
     # Recreate service if paths have changed or service doesn't exist
     current_paths = (credentials_path, token_path)
+    logger.info(f"get_gmail_service called with paths: {current_paths}")
+    logger.info(f"Current cached paths: {_gmail_service_paths}")
+    
     if _gmail_service is None or _gmail_service_paths != current_paths:
+        logger.info(f"Creating new GmailService with paths: {current_paths}")
         _gmail_service = GmailService(credentials_path, token_path)
         _gmail_service_paths = current_paths
+    else:
+        logger.info("Using cached GmailService instance")
     
     return _gmail_service
