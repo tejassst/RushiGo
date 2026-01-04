@@ -55,9 +55,14 @@ class GmailService:
                 try:
                     creds.refresh(Request())
                     logger.info("Refreshed Gmail credentials")
-                    # Save the refreshed credentials
-                    with open(self.token_path, 'w') as token:
-                        token.write(creds.to_json())
+                    # Try to save the refreshed credentials (may fail in read-only environments)
+                    try:
+                        with open(self.token_path, 'w') as token:
+                            token.write(creds.to_json())
+                        logger.info("Saved refreshed token")
+                    except (OSError, IOError) as e:
+                        logger.warning(f"Could not save refreshed token (read-only filesystem): {e}")
+                        # This is OK - the refreshed creds are still in memory and will work
                 except Exception as e:
                     logger.error(f"Failed to refresh credentials: {e}")
                     raise RuntimeError(
