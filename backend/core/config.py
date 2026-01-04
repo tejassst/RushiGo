@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = Field(default="")
     
     # Email configuration (Gmail API)
-    GMAIL_CREDENTIALS_PATH: str = Field(default="credentials.json")
-    GMAIL_TOKEN_PATH: str = Field(default="token.json")
+    GMAIL_CREDENTIALS_PATH: str = Field(default="/etc/secrets/credentials.json")
+    GMAIL_TOKEN_PATH: str = Field(default="/etc/secrets/token.json")
     FROM_EMAIL: str = Field(default="RushiGo Notifications")
 
     @field_validator("DATABASE_URL", "GEMINI_API_KEY")

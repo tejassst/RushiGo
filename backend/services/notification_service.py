@@ -2,7 +2,7 @@
 Notification service for deadline reminders using Mailgun
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
@@ -28,7 +28,7 @@ class NotificationService:
     def send_deadline_notification(self, user: User, deadline: Deadline, notification_type: str = "approaching") -> bool:
         """Send email notification for a specific deadline"""
         try:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             
             # Safely extract values from SQLAlchemy objects
             user_name = getattr(user, 'username', None) or "User"
@@ -107,7 +107,7 @@ class NotificationService:
         }
         
         try:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             
             # Get approaching deadlines (3 days, 1 day, same day, or 1 hour)
             approaching_deadlines = db.query(Deadline).options(
@@ -172,7 +172,7 @@ class NotificationService:
                     continue
                 
                 # Check if we already sent a notification for this deadline today with this period
-                today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
                 deadline_title_str = str(getattr(deadline, 'title', '') or '')
                 
                 existing_notification = db.query(Notification).filter(
@@ -192,7 +192,7 @@ class NotificationService:
                             user_id=deadline.user_id,
                             message=f"Approaching deadline notification sent for: {deadline_title_str} ({notification_period})",
                             sent=True,
-                            created_at=datetime.now()
+                            created_at=datetime.now(timezone.utc)
                         )
                         db.add(notification)
                         stats["approaching_sent"] += 1
@@ -209,7 +209,7 @@ class NotificationService:
                     logger.warning(f"User not found for deadline {deadline.id}")
                     continue
                 
-                today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
                 deadline_title_str = str(getattr(deadline, 'title', '') or '')
                 
                 existing_overdue_notification = db.query(Notification).filter(
@@ -228,7 +228,7 @@ class NotificationService:
                             user_id=deadline.user_id,
                             message=f"Overdue deadline notification sent for: {deadline_title_str}",
                             sent=True,
-                            created_at=datetime.now()
+                            created_at=datetime.now(timezone.utc)
                         )
                         db.add(notification)
                         stats["overdue_sent"] += 1
@@ -257,7 +257,7 @@ class NotificationService:
             if user is None or not getattr(user, 'is_active', False):
                 return False
             
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             
             # Check if digest was already sent today
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
