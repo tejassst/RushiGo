@@ -1,7 +1,17 @@
 import { Button } from "./ui/button";
-import { LogIn, UserPlus, Menu, X, Users, LogOut, User } from "lucide-react";
+import {
+  LogIn,
+  UserPlus,
+  Menu,
+  X,
+  Users,
+  LogOut,
+  User,
+  Bell,
+} from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { NotificationInfoModal } from "./NotificationInfoModal";
 
 interface HeaderProps {
   onNavigate: (
@@ -23,6 +33,7 @@ export function Header({
   isAuthenticated,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const { user } = useAuth();
 
   const navItems = [
@@ -85,6 +96,18 @@ export function Header({
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated ? (
               <>
+                {/* Notification Bell Icon */}
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsNotificationModalOpen(true)}
+                  className="relative text-gray-700 hover:text-purple-600 hover:bg-purple-50 p-2"
+                  title="How notifications work"
+                >
+                  <Bell className="h-5 w-5 animate-pulse" />
+                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full animate-ping"></span>
+                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+                </Button>
+
                 <div className="flex items-center space-x-2 text-gray-700">
                   <User className="h-4 w-4" />
                   <span className="text-sm">
@@ -162,6 +185,19 @@ export function Header({
               <div className="pt-4 border-t border-gray-100 space-y-2">
                 {isAuthenticated ? (
                   <>
+                    {/* Notification Bell for Mobile */}
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setIsNotificationModalOpen(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="justify-start w-full text-gray-700 hover:text-purple-600 hover:bg-purple-50"
+                    >
+                      <Bell className="h-4 w-4 mr-2" />
+                      Notification Settings
+                    </Button>
+
                     <div className="flex items-center space-x-2 text-gray-700 px-3 py-2">
                       <User className="h-4 w-4" />
                       <span className="text-sm">
@@ -210,6 +246,12 @@ export function Header({
           </div>
         )}
       </div>
+
+      {/* Notification Info Modal */}
+      <NotificationInfoModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+      />
     </header>
   );
 }
