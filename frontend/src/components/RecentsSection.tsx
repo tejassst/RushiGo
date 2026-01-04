@@ -120,17 +120,19 @@ export function RecentsSection() {
     setIsCreating(true);
     try {
       // datetime-local gives us "2024-01-15T14:30" format (local time)
-      // We need to keep it as local time, not convert to UTC
-      // Just append seconds and timezone offset to make it ISO compliant
+      // Convert to ISO string with timezone to preserve user's local time
       let deadlineDate: string;
 
       if (formData.date.includes("T")) {
         // Has time component: "2024-01-15T14:30"
-        // Append ":00" for seconds to make it ISO-like, but keep as local time string
-        deadlineDate = formData.date + ":00";
+        // Create a Date object which will be in user's local timezone
+        const localDate = new Date(formData.date);
+        // Convert to ISO string which includes timezone offset
+        deadlineDate = localDate.toISOString();
       } else {
-        // No time component, add midnight
-        deadlineDate = formData.date + "T00:00:00";
+        // No time component, add midnight in user's timezone
+        const localDate = new Date(formData.date + "T00:00:00");
+        deadlineDate = localDate.toISOString();
       }
 
       await createDeadline({

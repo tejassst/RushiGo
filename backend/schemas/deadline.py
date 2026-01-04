@@ -20,21 +20,23 @@ class DeadlineBase(BaseModel):
 
     @validator('date', pre=True)
     def parse_date(cls, v):
-        """Parse date string as naive datetime (local time, not UTC)"""
+        """Parse date string and handle timezone properly"""
         if isinstance(v, str):
-            # Remove any timezone info and parse as naive datetime
-            # This treats the input as local time, not UTC
-            v = v.replace('Z', '').replace('+00:00', '')
-            if 'T' in v:
-                # Has time component
-                try:
-                    return datetime.fromisoformat(v)
-                except ValueError:
-                    # Fallback for various formats
-                    return datetime.strptime(v, '%Y-%m-%dT%H:%M:%S')
-            else:
-                # Date only, add midnight
-                return datetime.fromisoformat(v + 'T00:00:00')
+            # Parse ISO format with timezone
+            try:
+                # This handles: "2024-01-15T14:30:00.000Z" or "2024-01-15T14:30:00+05:30"
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                # Fallback: try without timezone (treat as UTC)
+                v = v.replace('Z', '').replace('+00:00', '')
+                if 'T' in v:
+                    try:
+                        return datetime.fromisoformat(v)
+                    except ValueError:
+                        return datetime.strptime(v, '%Y-%m-%dT%H:%M:%S')
+                else:
+                    # Date only, add midnight UTC
+                    return datetime.fromisoformat(v + 'T00:00:00+00:00')
         return v
 
     @validator('estimated_hours')
