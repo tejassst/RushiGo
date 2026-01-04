@@ -1,5 +1,6 @@
 import { Bell, Clock, Calendar, AlertCircle, Mail, X } from "lucide-react";
 import { Button } from "./ui/button";
+import { createPortal } from "react-dom";
 
 interface NotificationInfoModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ export function NotificationInfoModal({
 }: NotificationInfoModalProps) {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
       <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8">
         {/* Header */}
@@ -184,6 +185,7 @@ export function NotificationInfoModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
