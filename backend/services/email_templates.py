@@ -11,13 +11,19 @@ class EmailTemplates:
         """Plain text template for deadline approaching notification"""
         course_text = f" for {course}" if course else ""
         
+        # Format with timezone info if available
+        if deadline_date.tzinfo:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p %Z')
+        else:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p')
+        
         return f"""
 Hi {user_name},
 
 This is a friendly reminder that your deadline{course_text} is approaching:
 
 📋 Deadline: {deadline_title}
-📅 Due Date: {deadline_date.strftime('%B %d, %Y at %I:%M %p')}
+📅 Due Date: {date_str}
 ⏰ Time Remaining: {days_left} day{'s' if days_left != 1 else ''}
 
 Don't forget to complete your task on time!
@@ -36,6 +42,12 @@ To manage your notifications, log into your RushiGo account.
         course_text = f" for <strong>{course}</strong>" if course else ""
         
         urgency_color = "#ff4444" if days_left <= 1 else "#ff8800" if days_left <= 3 else "#4CAF50"
+        
+        # Format with timezone info if available
+        if deadline_date.tzinfo:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p %Z')
+        else:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p')
         
         return f"""
 <!DOCTYPE html>
@@ -67,7 +79,7 @@ To manage your notifications, log into your RushiGo account.
             
             <div class="deadline-card">
                 <h3>📋 {deadline_title}</h3>
-                <p><strong>📅 Due Date:</strong> {deadline_date.strftime('%B %d, %Y at %I:%M %p')}</p>
+                <p><strong>📅 Due Date:</strong> {date_str}</p>
                 <p><strong>⏰ Time Remaining:</strong> <span class="days-left">{days_left} day{'s' if days_left != 1 else ''}</span></p>
             </div>
             
@@ -91,13 +103,19 @@ To manage your notifications, log into your RushiGo account.
         """Plain text template for overdue deadline notification"""
         course_text = f" for {course}" if course else ""
         
+        # Format with timezone info if available
+        if deadline_date.tzinfo:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p %Z')
+        else:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p')
+        
         return f"""
 Hi {user_name},
 
 Your deadline{course_text} is now overdue:
 
 📋 Deadline: {deadline_title}
-📅 Was Due: {deadline_date.strftime('%B %d, %Y at %I:%M %p')}
+📅 Was Due: {date_str}
 ⚠️ Overdue by: {days_overdue} day{'s' if days_overdue != 1 else ''}
 
 Please complete this task as soon as possible!
