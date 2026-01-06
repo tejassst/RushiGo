@@ -40,7 +40,7 @@ class DocumentProcessor:
         Extract deadlines from document text using Gemini API
         """
         prompt = f"""
-        Analyze the following text and extract all deadlines and tasks(Make sure they are genuine deadlines). For each one, provide:
+        Analyze the following text and extract all deadlines and tasks(Make sure they are genuine deadlines or assignments). For each one, provide:
         1. A clear title
         2. Detailed description
         3. Course/subject name (if identifiable from context, otherwise "General")
