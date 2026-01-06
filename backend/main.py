@@ -43,6 +43,24 @@ app.include_router(deadline.router, prefix=settings.API_PREFIX)
 app.include_router(team.router, prefix=settings.API_PREFIX)
 app.include_router(notifications.router, prefix=settings.API_PREFIX)
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "service": "RushiGo API",
+        "version": "1.0.0"
+    }
+
+@app.get(f"{settings.API_PREFIX}/health")
+async def api_health_check():
+    """Health check endpoint under API prefix"""
+    return {
+        "status": "healthy",
+        "service": "RushiGo API",
+        "version": "1.0.0"
+    }
+
 @app.on_event("startup")
 async def startup_event():
     """Start background services when the app starts"""
