@@ -1,35 +1,53 @@
-# 🎯 RushiGo - Smart Deadline Management System
+# 🎯 RushiGo - AI-Powered Deadline Management System
 
-> **Keep your academic goals on track with intelligent deadline reminders and beautiful email notifications.**
+> **Never miss a deadline again with AI document processing and intelligent email reminders.**
+
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://rushigo.tsapps.tech)
+[![Backend API](https://img.shields.io/badge/API-live-blue)](https://rushigo-backend.onrender.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🌟 Features
 
-### ✅ **Smart Deadline Management**
+### 🤖 **AI Document Processing**
 
-- Create, track, and organize academic deadlines
-- Course-based categorization
-- Progress tracking and completion status
-- Team collaboration and shared deadlines
+- **Upload & Extract**: Upload syllabus PDFs and let AI automatically extract all deadlines
+- **Google Gemini Integration**: Powered by advanced LLM for accurate deadline detection
+- **Smart Parsing**: Extracts dates, assignments, courses, and descriptions automatically
+- **Multiple Formats**: Supports PDF, TXT, and document files
 
 ### 📧 **Intelligent Email Notifications**
 
-- **Automatic Reminders**: 3 days, 1 day, and same-day notifications
-- **Daily Digest**: Morning summary of upcoming and overdue deadlines
+- **Time-Windowed Reminders**:
+  - 3 days before deadline
+  - 1 day before deadline
+  - 1 hour before deadline
+- **Overdue Alerts**: Daily reminders until deadline is completed
+- **Gmail API Integration**: Secure OAuth2 authentication
 - **Beautiful Templates**: Responsive HTML emails with professional design
-- **Smart Scheduling**: Background processing with no performance impact
+- **Timezone-Aware**: Respects UTC with clear timezone display
+- **Smart Deduplication**: Each notification sent only once per threshold
 
-### 🌐 **Modern Tech Stack**
+### 👥 **Team Collaboration**
 
-- **Backend**: FastAPI (Python) with SQLAlchemy ORM
-- **Database**: PostgreSQL (Supabase Cloud)
-- **Email Service**: Mailgun integration
-- **Architecture**: RESTful API with automatic documentation
+- Create and manage teams
+- Share deadlines with team members
+- Track team progress
+- Collaborative deadline management
+
+### � **Modern User Interface**
+
+- **React + TypeScript**: Type-safe, modern frontend
+- **Tailwind CSS**: Beautiful, responsive design
+- **Real-time Updates**: Instant deadline synchronization
+- **Interactive Modals**: Learn about notification system with animated bell icon
+- **Dark Mode Ready**: Professional gradient themes
 
 ### 🚀 **Production Ready**
 
-- Cloud database with automatic backups
+- Deployed on Render (Backend) and Vercel (Frontend)
+- PostgreSQL database with automatic backups
+- Background scheduler for notifications (runs every 5 minutes)
 - Comprehensive error handling and logging
-- Background task scheduling
 - API documentation with Swagger UI
 
 ## 🛠️ Quick Start
@@ -38,7 +56,7 @@
 
 - Python 3.8+
 - PostgreSQL database (or Supabase account)
-- Mailgun account for email notifications
+- Gmail API credentials for email notifications (see [GMAIL_SETUP.md](backend/GMAIL_SETUP.md))
 
 ### **Installation**
 
@@ -97,27 +115,29 @@ DATABASE_URL=postgresql://user:password@host:port/database
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 
-# Mailgun Email Service
-MAILGUN_DOMAIN=your-domain.mailgun.org
-MAILGUN_API_KEY=your-private-api-key
-FROM_EMAIL=RushiGo <no-reply@your-domain.mailgun.org>
+# Gmail API Email Service
+GMAIL_CREDENTIALS_PATH=/path/to/credentials.json
+GMAIL_TOKEN_PATH=/path/to/token.json
+FROM_EMAIL=RushiGo Notifications
 
 # Application Settings
 DEBUG=True
 API_PREFIX=/api
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
-# Optional: AI Integration
+# AI Integration
 GEMINI_API_KEY=your-gemini-api-key
 ```
 
-### **Mailgun Setup**
+### **Gmail API Setup**
 
-1. **Create Account**: Sign up at [mailgun.com](https://mailgun.com)
-2. **Get API Key**: Go to Settings → API Keys → Copy Private API key
-3. **Add Domain**: Use sandbox domain for testing
-4. **Authorized Recipients**: Add test email addresses for sandbox domain
-5. **Test Setup**: Run `python scripts/simple_mailgun_test.py`
+1. **Enable Gmail API**: Go to [Google Cloud Console](https://console.cloud.google.com)
+2. **Create OAuth2 Credentials**: Download `credentials.json`
+3. **Authenticate**: Run `python scripts/test_gmail.py` to generate `token.json`
+4. **Configure Paths**: Set `GMAIL_CREDENTIALS_PATH` and `GMAIL_TOKEN_PATH` in `.env`
+5. **Test Setup**: Run `python scripts/test_gmail.py` to verify email sending
+
+For detailed setup instructions, see [GMAIL_SETUP.md](backend/GMAIL_SETUP.md)
 
 ### **Database Setup**
 
@@ -217,8 +237,8 @@ Visit `http://localhost:8000/docs` for complete API documentation with interacti
 ### **Testing Notifications**
 
 ```bash
-# Test Mailgun connection
-cd backend && python scripts/simple_mailgun_test.py
+# Test Gmail API connection
+cd backend && python scripts/test_gmail.py
 
 # Test user notification
 curl -X POST "http://localhost:8000/api/notifications/send-test-notification/1"
@@ -232,8 +252,8 @@ curl -X POST "http://localhost:8000/api/notifications/send-deadline-notification
 ### **Running Tests**
 
 ```bash
-# Test email system
-python scripts/test_mailgun.py
+# Test email system (Gmail API)
+python scripts/test_gmail.py
 
 # Test database connection
 python scripts/test_connection.py
@@ -267,7 +287,7 @@ python scripts/init_db.py
 ### **Development Deployment**
 
 1. Follow Quick Start guide above
-2. Use sandbox Mailgun domain
+2. Set up Gmail API credentials (OAuth2)
 3. Use Supabase free tier
 4. Set `DEBUG=True`
 
@@ -279,7 +299,8 @@ python scripts/init_db.py
 # Production environment variables
 DEBUG=False
 DATABASE_URL=postgresql://prod-user:pass@prod-host:5432/rushigo
-MAILGUN_DOMAIN=mail.yourdomain.com  # Verified domain
+GMAIL_CREDENTIALS_PATH=/etc/secrets/credentials.json
+GMAIL_TOKEN_PATH=/etc/secrets/token.json
 ALLOWED_ORIGINS=https://yourdomain.com
 ```
 
@@ -291,9 +312,9 @@ ALLOWED_ORIGINS=https://yourdomain.com
 
 #### **Email Service**
 
-- Upgrade from Mailgun sandbox to verified domain
-- Configure DNS records (SPF, DKIM)
-- Remove authorized recipient restrictions
+- Upload Gmail API credentials to production server
+- Ensure OAuth2 token is properly configured
+- Set appropriate file paths for credentials and token
 
 #### **Server**
 
@@ -314,13 +335,13 @@ curl -X GET "http://localhost:8000/api/notifications/statistics"
 python scripts/test_connection.py
 
 # Email delivery test
-python scripts/simple_mailgun_test.py
+python scripts/test_gmail.py
 ```
 
 ### **Performance Metrics**
 
 - **Response Time**: < 2 seconds for API endpoints
-- **Email Delivery**: < 5 minutes via Mailgun
+- **Email Delivery**: Near-instant via Gmail API
 - **Database Queries**: Optimized with proper indexing
 - **Background Tasks**: Non-blocking notification processing
 
@@ -328,14 +349,15 @@ python scripts/simple_mailgun_test.py
 
 ### **Common Issues**
 
-#### **Email Not Sending (401 Error)**
+#### **Email Not Sending (Authentication Error)**
 
 ```bash
-# Solution: Fix Mailgun API key
-1. Check Mailgun dashboard → Settings → API Keys
-2. Copy Private API key (NOT Public)
-3. Update MAILGUN_API_KEY in .env
-4. Restart application
+# Solution: Fix Gmail API credentials
+1. Ensure credentials.json is in the correct location
+2. Re-authenticate: python scripts/test_gmail.py
+3. Check token.json is generated and valid
+4. Verify GMAIL_CREDENTIALS_PATH and GMAIL_TOKEN_PATH in .env
+5. Restart application
 ```
 
 #### **Database Connection Failed**
@@ -351,11 +373,12 @@ python scripts/simple_mailgun_test.py
 #### **No Email Received**
 
 ```bash
-# Solution: Check email configuration
-1. Verify recipient in Mailgun authorized list (sandbox)
+# Solution: Check Gmail API configuration
+1. Verify Gmail API is enabled in Google Cloud Console
 2. Check spam folder
-3. Test with: python scripts/simple_mailgun_test.py
-4. Check Mailgun delivery logs
+3. Test with: python scripts/test_gmail.py
+4. Ensure OAuth2 token hasn't expired (re-authenticate if needed)
+5. Verify sending email has Gmail access
 ```
 
 ### **Debug Commands**
@@ -365,7 +388,7 @@ python scripts/simple_mailgun_test.py
 tail -f logs/app.log
 
 # Test individual components
-python scripts/simple_mailgun_test.py     # Email
+python scripts/test_gmail.py              # Email (Gmail API)
 python scripts/test_connection.py        # Database
 curl -X GET "http://localhost:8000/health"  # API
 ```
