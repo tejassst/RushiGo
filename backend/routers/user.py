@@ -45,7 +45,8 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = User(
         email=user.email,
         username=user.username,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        calendar_sync_enabled=True  # Enable calendar sync by default for new users
     )
     db.add(db_user)
     db.commit()

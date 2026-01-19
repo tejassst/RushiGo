@@ -32,9 +32,14 @@ try:
         user_columns = [col['name'] for col in inspector.get_columns('users')]
         
         if 'calendar_sync_enabled' not in user_columns:
-            conn.execute(text("ALTER TABLE users ADD COLUMN calendar_sync_enabled BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN calendar_sync_enabled BOOLEAN DEFAULT TRUE"))
             conn.commit()
-            logger.info("Added calendar_sync_enabled column to users table")
+            logger.info("Added calendar_sync_enabled column to users table (default: TRUE)")
+        else:
+            # Enable calendar sync for all existing users by default
+            conn.execute(text("UPDATE users SET calendar_sync_enabled = TRUE WHERE calendar_sync_enabled IS NULL OR calendar_sync_enabled = FALSE"))
+            conn.commit()
+            logger.info("Enabled calendar sync for all existing users")
         
         if 'calendar_id' not in user_columns:
             conn.execute(text("ALTER TABLE users ADD COLUMN calendar_id VARCHAR(255)"))
