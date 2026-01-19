@@ -16,6 +16,11 @@ class Deadline(Base):
     completed = Column(Boolean, nullable=False, default=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)  # Optional team assignment
+    
+    # Google Calendar integration
+    calendar_event_id = Column(String(255), nullable=True, index=True)  # Google Calendar event ID
+    calendar_synced = Column(Boolean, nullable=False, default=False)  # Whether synced with calendar
+    
     user = relationship("User", back_populates="deadlines")
     team = relationship("Team", back_populates="deadlines")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

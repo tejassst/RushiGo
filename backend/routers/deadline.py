@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response, status, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
 import os
+import logging
 
 from db.database import get_db
 from models.deadline import Deadline
@@ -12,7 +13,10 @@ from models.membership import Membership
 from schemas.deadline import DeadlineCreate, DeadlineResponse, DeadlineUpdate
 from auth.oauth2 import get_current_user
 from services.document_processor import DocumentProcessor
+from services.calendar_service import get_calendar_service
 from core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Initialize document processor with Gemini API key
 document_processor = DocumentProcessor(settings.GEMINI_API_KEY)
@@ -55,6 +59,34 @@ async def create_deadline(
         db.commit()
         # Refresh to get the created id and timestamps
         db.refresh(new_deadline)
+        
+        # Sync to Google Calendar if enabled
+        if getattr(current_user, 'calendar_sync_enabled', False):
+            try:
+                calendar_service = get_calendar_service()
+                calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
+                
+                event = calendar_service.create_event(
+                    title=str(getattr(new_deadline, 'title')),
+                    description=str(getattr(new_deadline, 'description', '') or ''),
+                    start_datetime=getattr(new_deadline, 'date'),
+                    estimated_hours=getattr(new_deadline, 'estimated_hours', None),
+                    course=getattr(new_deadline, 'course', None),
+                    priority=str(getattr(new_deadline, 'priority')),
+                    calendar_id=calendar_id
+                )
+                
+                # Update deadline with calendar event ID
+                setattr(new_deadline, 'calendar_event_id', event.get('id'))
+                setattr(new_deadline, 'calendar_synced', True)
+                db.commit()
+                db.refresh(new_deadline)
+                
+                logger.info(f"Synced deadline {new_deadline.id} to calendar")
+            except Exception as e:
+                logger.error(f"Failed to sync to calendar: {e}")
+                # Don't fail the deadline creation if calendar sync fails
+        
         return new_deadline
     except Exception as e:
         # Rollback on error
@@ -124,12 +156,39 @@ async def update_deadline(
         )
     
     # Update fields if provided in request
-    for field, value in request.dict(exclude_unset=True).items():
+    update_data = request.dict(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(deadline, field, value)
     
     try:
         db.commit()
         db.refresh(deadline)
+        
+        # Sync changes to Google Calendar if enabled and synced
+        if (getattr(current_user, 'calendar_sync_enabled', False) and 
+            getattr(deadline, 'calendar_synced', False) and 
+            getattr(deadline, 'calendar_event_id', None)):
+            try:
+                calendar_service = get_calendar_service()
+                calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
+                
+                calendar_service.update_event(
+                    event_id=str(getattr(deadline, 'calendar_event_id')),
+                    title=str(getattr(deadline, 'title')) if 'title' in update_data else None,
+                    description=str(getattr(deadline, 'description', '')) if 'description' in update_data else None,
+                    start_datetime=getattr(deadline, 'date') if 'date' in update_data else None,
+                    estimated_hours=getattr(deadline, 'estimated_hours', None) if 'estimated_hours' in update_data else None,
+                    course=getattr(deadline, 'course', None) if 'course' in update_data else None,
+                    priority=str(getattr(deadline, 'priority')) if 'priority' in update_data else None,
+                    completed=getattr(deadline, 'completed', False) if 'completed' in update_data else None,
+                    calendar_id=calendar_id
+                )
+                
+                logger.info(f"Updated calendar event for deadline {deadline.id}")
+            except Exception as e:
+                logger.error(f"Failed to update calendar event: {e}")
+                # Don't fail the deadline update if calendar sync fails
+        
         return deadline
     except Exception as e:
         db.rollback()
@@ -160,6 +219,22 @@ async def delete_deadline(
         )
     
     try:
+        # Delete from Google Calendar if synced
+        if (getattr(current_user, 'calendar_sync_enabled', False) and 
+            getattr(deadline, 'calendar_synced', False) and 
+            getattr(deadline, 'calendar_event_id', None)):
+            try:
+                calendar_service = get_calendar_service()
+                calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
+                calendar_service.delete_event(
+                    event_id=str(getattr(deadline, 'calendar_event_id')),
+                    calendar_id=calendar_id
+                )
+                logger.info(f"Deleted calendar event for deadline {deadline.id}")
+            except Exception as e:
+                logger.error(f"Failed to delete calendar event: {e}")
+                # Continue with deadline deletion even if calendar delete fails
+        
         db.delete(deadline)
         db.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)

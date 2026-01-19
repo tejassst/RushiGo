@@ -6,6 +6,7 @@ from fastapi.encoders import jsonable_encoder
 
 from core.config import settings
 from routers import user, deadline, team, notifications
+from routers import calendar as calendar_router
 from db.database import create_tables
 from models import User, Deadline, Team, Membership, Notification  # Ensure models are imported
 from services.scheduler import start_scheduler
@@ -42,19 +43,20 @@ app.include_router(user.router, prefix=settings.API_PREFIX)
 app.include_router(deadline.router, prefix=settings.API_PREFIX)
 app.include_router(team.router, prefix=settings.API_PREFIX)
 app.include_router(notifications.router, prefix=settings.API_PREFIX)
+app.include_router(calendar_router.router, prefix=settings.API_PREFIX)
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
-    """Health check endpoint for monitoring"""
+    """Health check endpoint for monitoring (supports GET and HEAD for uptime services)"""
     return {
         "status": "healthy",
         "service": "RushiGo API",
         "version": "1.0.0"
     }
 
-@app.get(f"{settings.API_PREFIX}/health")
+@app.api_route(f"{settings.API_PREFIX}/health", methods=["GET", "HEAD"])
 async def api_health_check():
-    """Health check endpoint under API prefix"""
+    """Health check endpoint under API prefix (supports GET and HEAD for uptime services)"""
     return {
         "status": "healthy",
         "service": "RushiGo API",

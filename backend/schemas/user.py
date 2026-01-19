@@ -28,10 +28,16 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     is_active: Optional[bool] = None
 
+class CalendarPreferencesUpdate(BaseModel):
+    calendar_sync_enabled: Optional[bool] = None
+    calendar_id: Optional[str] = "primary"
+
 class UserResponse(UserBase):
     id: int
     is_active: bool
     is_verified: bool
+    calendar_sync_enabled: bool = False
+    calendar_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

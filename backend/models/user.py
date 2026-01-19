@@ -13,6 +13,11 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    
+    # Google Calendar sync preferences
+    calendar_sync_enabled = Column(Boolean, default=False)  # Enable/disable calendar sync
+    calendar_id = Column(String(255), nullable=True)  # Custom calendar ID (default: "primary")
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
