@@ -31,9 +31,10 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
+# Add CORS middleware - MUST be added before routers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.ALLOWED_ORIGINS if settings.ALLOWED_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,18 +46,18 @@ app.include_router(team.router, prefix=settings.API_PREFIX)
 app.include_router(notifications.router, prefix=settings.API_PREFIX)
 app.include_router(calendar_router.router, prefix=settings.API_PREFIX)
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/health", methods=["GET", "HEAD", "OPTIONS"])
 async def health_check():
-    """Health check endpoint for monitoring (supports GET and HEAD for uptime services)"""
+    """Health check endpoint for monitoring (supports GET, HEAD, and OPTIONS for CORS)"""
     return {
         "status": "healthy",
         "service": "RushiGo API",
         "version": "1.0.0"
     }
 
-@app.api_route(f"{settings.API_PREFIX}/health", methods=["GET", "HEAD"])
+@app.api_route(f"{settings.API_PREFIX}/health", methods=["GET", "HEAD", "OPTIONS"])
 async def api_health_check():
-    """Health check endpoint under API prefix (supports GET and HEAD for uptime services)"""
+    """Health check endpoint under API prefix (supports GET, HEAD, and OPTIONS for CORS)"""
     return {
         "status": "healthy",
         "service": "RushiGo API",
