@@ -63,8 +63,42 @@ logs/
 
 # Temporary files
 *.tmp
-*.tempbackend/.env
-backend/.env
-backend/.env
-backend/.env
-.env
+*.temp
+
+# Documentation files (except README)
+# Root level docs
+API_DOCUMENTATION.md
+CALENDAR_*.md
+CORS_FIX.md
+DEPLOYMENT*.md
+FRONTEND_*.md
+GMAIL_*.md
+GOOGLE_*.md
+LINKEDIN_POST.md
+NOTIFICATION_*.md
+QUICK_REFERENCE.md
+SQLALCHEMY_*.md
+TEST_*.md
+UPTIME_*.md
+USER_CHOICE_*.md
+
+# Backend docs (except README)
+backend/EMAIL_*.md
+backend/GMAIL_*.md
+backend/SUPABASE_*.md
+backend/SWITCH_*.md
+backend/TROUBLESHOOTING_*.md
+
+# Test scripts
+backend/scripts/test_*.py
+backend/scripts/debug_*.py
+backend/scripts/simple_*_test.py
+backend/scripts/*_test.py
+backend/test_*.sh
+backend/*_test.sh
+backend/install_and_test_*.sh
+
+# Helper scripts
+deploy-*.sh
+cleanup-*.sh
+regenerate_*.py
