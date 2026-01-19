@@ -17,8 +17,45 @@ logger = logging.getLogger(__name__)
 
 # Ensure database tables exist (create if they don't exist)
 try:
+    from sqlalchemy import text, inspect
+    from db.database import engine
+    
+    # First, create any missing tables
     create_tables()
     logger.info("Database tables ensured/created successfully")
+    
+    # Then, add any missing calendar columns (migration)
+    with engine.connect() as conn:
+        inspector = inspect(engine)
+        
+        # Check and add User table columns
+        user_columns = [col['name'] for col in inspector.get_columns('users')]
+        
+        if 'calendar_sync_enabled' not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN calendar_sync_enabled BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+            logger.info("Added calendar_sync_enabled column to users table")
+        
+        if 'calendar_id' not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN calendar_id VARCHAR(255)"))
+            conn.commit()
+            logger.info("Added calendar_id column to users table")
+        
+        # Check and add Deadline table columns
+        deadline_columns = [col['name'] for col in inspector.get_columns('deadlines')]
+        
+        if 'calendar_event_id' not in deadline_columns:
+            conn.execute(text("ALTER TABLE deadlines ADD COLUMN calendar_event_id VARCHAR(255)"))
+            conn.commit()
+            logger.info("Added calendar_event_id column to deadlines table")
+        
+        if 'calendar_synced' not in deadline_columns:
+            conn.execute(text("ALTER TABLE deadlines ADD COLUMN calendar_synced BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+            logger.info("Added calendar_synced column to deadlines table")
+    
+    logger.info("Calendar migration completed successfully")
+    
 except Exception as e:
     logger.error(f"Error ensuring database tables: {str(e)}")
     raise
