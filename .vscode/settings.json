@@ -15,12 +15,12 @@
   // ----------------------------------------------------
   
   // Set the default interpreter path
-  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python3",
   
   // Extra paths for analysis
   "python.analysis.extraPaths": [
-    "${workspaceFolder}/backend/.venv/lib/python3.13/site-packages",
-    "${workspaceFolder}/backend/.venv/lib64/python3.13/site-packages",
+    "${workspaceFolder}/backend/.venv/lib/python3.14/site-packages",
+    "${workspaceFolder}/backend/.venv/lib64/python3.14/site-packages",
     "${workspaceFolder}/backend"
   ],
   "python.analysis.typeCheckingMode": "basic",

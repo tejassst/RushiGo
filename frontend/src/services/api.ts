@@ -307,7 +307,11 @@ export class ApiClient {
 
   // Calendar OAuth
   getCalendarConnectUrl(): string {
-    return `${API_BASE_URL}/calendar/connect`;
+    const token = this.token;
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+    return `${API_BASE_URL}/calendar/connect?token=${encodeURIComponent(token)}`;
   }
 
   async getCalendarStatus(): Promise<CalendarConnectionStatus> {

@@ -35,23 +35,62 @@ SCOPES = [
 
 @router.get("/connect")
 async def initiate_calendar_oauth(
-    current_user: User = Depends(get_current_user),
+    token: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Initiate OAuth flow for user to connect their Google Calendar
     
     Redirects user directly to Google OAuth consent screen
+    
+    Accepts authentication via:
+    1. Authorization header (preferred)
+    2. token query parameter (for popup windows)
     """
     try:
+        # If token provided in query param, validate it
+        if token and not current_user:
+            from auth.oauth2 import SECRET_KEY, ALGORITHM
+            from jose import jwt, JWTError
+            
+            try:
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                email = payload.get("sub")
+                if email:
+                    current_user = db.query(User).filter(User.email == email).first()
+            except JWTError as e:
+                logger.error(f"Invalid token in query param: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authentication token"
+                )
+        
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated"
+            )
+        
         # Build client config from environment variables
+        client_id = settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID')
+        client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET')
+        backend_url = settings.BACKEND_URL or os.getenv('BACKEND_URL', 'http://localhost:8000')
+        
+        if not client_id or not client_secret:
+            logger.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Server configuration error: Missing Google OAuth credentials"
+            )
+        
         client_config = {
             "web": {
-                "client_id": settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID'),
-                "client_secret": settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET'),
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"]
+                "redirect_uris": [f"{backend_url}{settings.API_PREFIX}/calendar/callback"]
             }
         }
         
@@ -59,7 +98,7 @@ async def initiate_calendar_oauth(
         flow = Flow.from_client_config(
             client_config,
             scopes=SCOPES,
-            redirect_uri=f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"
+            redirect_uri=f"{backend_url}{settings.API_PREFIX}/calendar/callback"
         )
         
         # Generate authorization URL with user ID in state
@@ -75,6 +114,8 @@ async def initiate_calendar_oauth(
         # Redirect directly to Google OAuth
         return RedirectResponse(url=authorization_url)
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to initiate OAuth: {e}", exc_info=True)
         raise HTTPException(
@@ -86,8 +127,9 @@ async def initiate_calendar_oauth(
 @router.get("/callback")
 async def calendar_oauth_callback(
     request: Request,
-    code: str,
-    state: str,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -96,8 +138,32 @@ async def calendar_oauth_callback(
     Exchanges authorization code for access token and stores in user's account
     """
     try:
+        # Check if user denied access
+        if error:
+            logger.warning(f"OAuth authorization denied: {error}")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/?calendar_error=access_denied",
+                status_code=status.HTTP_302_FOUND
+            )
+        
+        # Check if code and state are present
+        if not code or not state:
+            logger.error(f"OAuth callback missing required parameters - code: {bool(code)}, state: {bool(state)}")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/?calendar_error=invalid_callback",
+                status_code=status.HTTP_302_FOUND
+            )
+        
         # Get user from state parameter
-        user_id = int(state)
+        try:
+            user_id = int(state)
+        except ValueError:
+            logger.error(f"Invalid state parameter: {state}")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/?calendar_error=invalid_state",
+                status_code=status.HTTP_302_FOUND
+            )
+        
         user = db.query(User).filter(User.id == user_id).first()
         
         if not user:
@@ -108,10 +174,20 @@ async def calendar_oauth_callback(
             )
         
         # Build client config from environment variables
+        client_id = settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID')
+        client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET')
+        
+        if not client_id or not client_secret:
+            logger.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/?calendar_error=server_config",
+                status_code=status.HTTP_302_FOUND
+            )
+        
         client_config = {
             "web": {
-                "client_id": settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID'),
-                "client_secret": settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET'),
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
                 "redirect_uris": [f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"]
@@ -124,6 +200,8 @@ async def calendar_oauth_callback(
             scopes=SCOPES,
             redirect_uri=f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"
         )
+        
+        logger.info(f"Exchanging OAuth code for tokens, user_id: {user_id}")
         
         # Exchange authorization code for tokens
         flow.fetch_token(code=code)
@@ -148,6 +226,10 @@ async def calendar_oauth_callback(
     except Exception as e:
         logger.error(f"OAuth callback failed: {e}", exc_info=True)
         # Redirect to frontend with error
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/?calendar_error=server_error&message={str(e)[:100]}",
+            status_code=status.HTTP_302_FOUND
+        )
         return RedirectResponse(
             url=f"{settings.FRONTEND_URL}/?calendar_error=true",
             status_code=status.HTTP_302_FOUND
