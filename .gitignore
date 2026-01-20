@@ -104,3 +104,6 @@ cleanup-*.sh
 regenerate_*.py
 token_calendar.json
 calendar_credentials.env
+
+# All docs
+docs/*.md

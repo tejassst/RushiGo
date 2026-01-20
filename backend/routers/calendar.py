@@ -17,6 +17,7 @@ from db.database import get_db
 from models import User, Deadline
 from services.calendar_service import get_calendar_service
 from routers.user import get_current_user
+from auth.oauth2 import get_current_user_optional, SECRET_KEY, ALGORITHM
 from core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -33,10 +34,23 @@ SCOPES = [
 ]
 
 
+@router.get("/debug-env")
+async def debug_environment():
+    """Debug endpoint to check environment variables (remove after testing)"""
+    return {
+        "has_client_id": bool(settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID')),
+        "has_client_secret": bool(settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET')),
+        "backend_url": settings.BACKEND_URL or os.getenv('BACKEND_URL', 'NOT_SET'),
+        "frontend_url": settings.FRONTEND_URL or os.getenv('FRONTEND_URL', 'NOT_SET'),
+        "client_id_prefix": (settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID', ''))[:20] if settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID') else 'NOT_SET'
+    }
+
+
 @router.get("/connect")
 async def initiate_calendar_oauth(
+    request: Request,
     token: Optional[str] = None,
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
@@ -51,7 +65,6 @@ async def initiate_calendar_oauth(
     try:
         # If token provided in query param, validate it
         if token and not current_user:
-            from auth.oauth2 import SECRET_KEY, ALGORITHM
             from jose import jwt, JWTError
             
             try:
