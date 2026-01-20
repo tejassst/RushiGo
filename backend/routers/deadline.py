@@ -63,7 +63,11 @@ async def create_deadline(
         # Sync to Google Calendar if enabled
         if getattr(current_user, 'calendar_sync_enabled', False):
             try:
-                calendar_service = get_calendar_service()
+                # Import the per-user calendar service function
+                from services.calendar_service import get_calendar_service_for_user
+                
+                # Create calendar service with user's OAuth tokens
+                calendar_service = get_calendar_service_for_user(current_user)
                 calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
                 
                 event = calendar_service.create_event(
@@ -79,10 +83,15 @@ async def create_deadline(
                 # Update deadline with calendar event ID
                 setattr(new_deadline, 'calendar_event_id', event.get('id'))
                 setattr(new_deadline, 'calendar_synced', True)
+                
+                # Save refreshed token if it was updated
                 db.commit()
                 db.refresh(new_deadline)
                 
-                logger.info(f"Synced deadline {new_deadline.id} to calendar")
+                logger.info(f"Synced deadline {new_deadline.id} to user's calendar")
+            except ValueError as e:
+                # User hasn't connected calendar yet
+                logger.warning(f"Calendar not connected for user {current_user.id}: {e}")
             except Exception as e:
                 logger.error(f"Failed to sync to calendar: {e}")
                 # Don't fail the deadline creation if calendar sync fails
@@ -169,7 +178,9 @@ async def update_deadline(
             getattr(deadline, 'calendar_synced', False) and 
             getattr(deadline, 'calendar_event_id', None)):
             try:
-                calendar_service = get_calendar_service()
+                from services.calendar_service import get_calendar_service_for_user
+                
+                calendar_service = get_calendar_service_for_user(current_user)
                 calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
                 
                 calendar_service.update_event(
@@ -185,6 +196,8 @@ async def update_deadline(
                 )
                 
                 logger.info(f"Updated calendar event for deadline {deadline.id}")
+            except ValueError as e:
+                logger.warning(f"Calendar not connected for user {current_user.id}: {e}")
             except Exception as e:
                 logger.error(f"Failed to update calendar event: {e}")
                 # Don't fail the deadline update if calendar sync fails
@@ -224,13 +237,17 @@ async def delete_deadline(
             getattr(deadline, 'calendar_synced', False) and 
             getattr(deadline, 'calendar_event_id', None)):
             try:
-                calendar_service = get_calendar_service()
+                from services.calendar_service import get_calendar_service_for_user
+                
+                calendar_service = get_calendar_service_for_user(current_user)
                 calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
                 calendar_service.delete_event(
                     event_id=str(getattr(deadline, 'calendar_event_id')),
                     calendar_id=calendar_id
                 )
                 logger.info(f"Deleted calendar event for deadline {deadline.id}")
+            except ValueError as e:
+                logger.warning(f"Calendar not connected for user {current_user.id}: {e}")
             except Exception as e:
                 logger.error(f"Failed to delete calendar event: {e}")
                 # Continue with deadline deletion even if calendar delete fails

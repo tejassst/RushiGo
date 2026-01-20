@@ -403,3 +403,71 @@ def get_calendar_service(
         _calendar_service_paths = paths
     
     return _calendar_service
+
+
+def get_calendar_service_for_user(user) -> CalendarService:
+    """
+    Create a CalendarService instance using user's stored OAuth tokens
+    
+    Args:
+        user: User model instance with calendar_token and calendar_refresh_token
+    
+    Returns:
+        CalendarService instance authenticated with user's credentials
+        
+    Raises:
+        ValueError: If user hasn't connected their calendar
+    """
+    import json
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+    
+    # Check if user has connected their calendar
+    if not user.calendar_token or not user.calendar_refresh_token:
+        raise ValueError("User has not connected their Google Calendar. Please connect first.")
+    
+    # Create credentials from user's stored tokens
+    creds_info = {
+        "token": user.calendar_token,
+        "refresh_token": user.calendar_refresh_token,
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),  # From environment
+        "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),  # From environment
+        "scopes": SCOPES
+    }
+    
+    # If client credentials not in env, try to load from file
+    if not creds_info["client_id"] or not creds_info["client_secret"]:
+        try:
+            with open("credentials.json", "r") as f:
+                client_config = json.load(f)
+                creds_info["client_id"] = client_config["installed"]["client_id"]
+                creds_info["client_secret"] = client_config["installed"]["client_secret"]
+        except Exception as e:
+            logger.error(f"Failed to load client credentials: {e}")
+            raise ValueError("Google Calendar client credentials not configured")
+    
+    try:
+        # Create credentials object
+        creds = Credentials.from_authorized_user_info(creds_info, SCOPES)
+        
+        # Refresh if expired
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            # Update user's token in database (will be done by caller)
+            user.calendar_token = creds.token
+            user.calendar_token_expiry = creds.expiry
+            logger.info(f"Refreshed calendar token for user {user.id}")
+        
+        # Create service instance
+        service_instance = CalendarService.__new__(CalendarService)
+        service_instance.service = build('calendar', 'v3', credentials=creds)
+        service_instance.credentials_path = None
+        service_instance.token_path = None
+        
+        logger.info(f"Created calendar service for user {user.id}")
+        return service_instance
+        
+    except Exception as e:
+        logger.error(f"Failed to create calendar service for user: {e}")
+        raise ValueError(f"Failed to authenticate with Google Calendar: {str(e)}")

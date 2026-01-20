@@ -1,17 +1,23 @@
 """
 Calendar API routes
 """
+import os
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
 
 from db.database import get_db
 from models import User, Deadline
 from services.calendar_service import get_calendar_service
 from routers.user import get_current_user
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +25,167 @@ router = APIRouter(
     prefix="/calendar",
     tags=["calendar"]
 )
+
+# OAuth 2.0 scopes for Google Calendar
+SCOPES = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/calendar.events'
+]
+
+# Get frontend URL for redirect
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')
+
+
+@router.get("/connect")
+async def initiate_calendar_oauth(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Initiate OAuth flow for user to connect their Google Calendar
+    
+    Returns authorization URL that frontend should redirect user to
+    """
+    try:
+        # Create OAuth flow
+        flow = Flow.from_client_secrets_file(
+            'credentials.json',
+            scopes=SCOPES,
+            redirect_uri=f"{settings.API_PREFIX}/calendar/callback"
+        )
+        
+        # Generate authorization URL with user ID in state
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            state=str(current_user.id)  # Pass user ID to callback
+        )
+        
+        logger.info(f"Generated OAuth URL for user {current_user.id}")
+        
+        return {
+            "authorization_url": authorization_url,
+            "message": "Redirect user to authorization_url to connect calendar"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to initiate OAuth: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to initiate calendar connection: {str(e)}"
+        )
+
+
+@router.get("/callback")
+async def calendar_oauth_callback(
+    request: Request,
+    code: str,
+    state: str,
+    db: Session = Depends(get_db)
+):
+    """
+    OAuth callback endpoint - Google redirects here after user authorizes
+    
+    Exchanges authorization code for access token and stores in user's account
+    """
+    try:
+        # Get user from state parameter
+        user_id = int(state)
+        user = db.query(User).filter(User.id == user_id).first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Exchange authorization code for tokens
+        flow = Flow.from_client_secrets_file(
+            'credentials.json',
+            scopes=SCOPES,
+            redirect_uri=f"{settings.API_PREFIX}/calendar/callback"
+        )
+        
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+        
+        # Store tokens in user's account
+        user.calendar_token = credentials.token
+        user.calendar_refresh_token = credentials.refresh_token
+        user.calendar_token_expiry = credentials.expiry
+        user.calendar_sync_enabled = True  # Auto-enable sync on connection
+        
+        db.commit()
+        
+        logger.info(f"Calendar connected successfully for user {user_id}")
+        
+        # Redirect back to frontend with success message
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}/?calendar_connected=true",
+            status_code=status.HTTP_302_FOUND
+        )
+        
+    except Exception as e:
+        logger.error(f"OAuth callback failed: {e}")
+        # Redirect to frontend with error
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}/?calendar_error=true",
+            status_code=status.HTTP_302_FOUND
+        )
+
+
+@router.post("/disconnect")
+async def disconnect_calendar(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Disconnect user's Google Calendar
+    
+    Removes stored OAuth tokens and disables calendar sync
+    """
+    try:
+        current_user.calendar_token = None
+        current_user.calendar_refresh_token = None
+        current_user.calendar_token_expiry = None
+        current_user.calendar_sync_enabled = False
+        
+        db.commit()
+        
+        logger.info(f"Calendar disconnected for user {current_user.id}")
+        
+        return {
+            "message": "Calendar disconnected successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to disconnect calendar: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to disconnect calendar: {str(e)}"
+        )
+
+
+@router.get("/status")
+async def get_calendar_status(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Check if user has connected their Google Calendar
+    
+    Returns connection status and token expiry
+    """
+    is_connected = bool(
+        current_user.calendar_token and 
+        current_user.calendar_refresh_token
+    )
+    
+    return {
+        "is_connected": is_connected,
+        "sync_enabled": current_user.calendar_sync_enabled,
+        "calendar_id": current_user.calendar_id or "primary",
+        "token_expiry": current_user.calendar_token_expiry.isoformat() if current_user.calendar_token_expiry else None
+    }
 
 
 @router.post("/enable")

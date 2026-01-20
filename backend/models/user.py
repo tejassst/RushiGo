@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -17,6 +17,11 @@ class User(Base):
     # Google Calendar sync preferences
     calendar_sync_enabled = Column(Boolean, default=False)  # Enable/disable calendar sync
     calendar_id = Column(String(255), nullable=True)  # Custom calendar ID (default: "primary")
+    
+    # Per-user OAuth tokens (encrypted storage for user's calendar access)
+    calendar_token = Column(Text, nullable=True)  # User's OAuth access token (JSON)
+    calendar_refresh_token = Column(String(512), nullable=True)  # User's refresh token
+    calendar_token_expiry = Column(DateTime(timezone=True), nullable=True)  # Token expiration
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
