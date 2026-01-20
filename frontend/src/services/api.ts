@@ -92,6 +92,11 @@ export interface UpdateCalendarPreferencesRequest {
   calendar_sync_enabled: boolean;
 }
 
+export interface CalendarConnectionStatus {
+  connected: boolean;
+  calendar_email?: string;
+}
+
 export class ApiClient {
   private token: string | null = null;
 
@@ -297,6 +302,21 @@ export class ApiClient {
     return this.request<CalendarPreferences>('/users/me/calendar-preferences', {
       method: 'PUT',
       body: JSON.stringify(preferences),
+    });
+  }
+
+  // Calendar OAuth
+  getCalendarConnectUrl(): string {
+    return `${API_BASE_URL}/calendar/connect`;
+  }
+
+  async getCalendarStatus(): Promise<CalendarConnectionStatus> {
+    return this.request<CalendarConnectionStatus>('/calendar/status');
+  }
+
+  async disconnectCalendar(): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/calendar/disconnect', {
+      method: 'POST',
     });
   }
 }
