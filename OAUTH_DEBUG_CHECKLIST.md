@@ -16,6 +16,7 @@ Verify these are set:
 ```
 
 **Important:**
+
 - `BACKEND_URL` should NOT have `/api` at the end
 - Should be exactly: `https://rushigo-backend.onrender.com`
 
@@ -67,6 +68,7 @@ export GOOGLE_CLIENT_SECRET="your-client-secret"
 ```
 
 Then in another terminal:
+
 ```bash
 cd /home/tejast/Documents/Projects/rushiGo/frontend
 npm run dev
@@ -88,10 +90,12 @@ curl -X GET "https://rushigo-backend.onrender.com/api/calendar/connect" \
 ```
 
 **Expected response:**
+
 - Should return HTTP 307 redirect
 - Location header should be: `https://accounts.google.com/o/oauth2/auth?...`
 
 **If you see:**
+
 - JSON response: Backend not using latest code
 - 500 error: Environment variables missing
 - 401 error: Token invalid/expired
@@ -108,6 +112,7 @@ console.log(import.meta.env.VITE_API_URL);
 Should be: `https://rushigo-backend.onrender.com/api`
 
 If it's wrong, update your Netlify environment variable:
+
 ```
 VITE_API_URL = https://rushigo-backend.onrender.com/api
 ```
@@ -115,24 +120,30 @@ VITE_API_URL = https://rushigo-backend.onrender.com/api
 ### Step 8: Common Issues & Solutions
 
 #### Issue: "Black page with 'not authenticated'"
+
 **Cause:** Backend can't create OAuth flow
 **Solution:** Check `BACKEND_URL` and Google credentials in Render
 
 #### Issue: "redirect_uri_mismatch error"
+
 **Cause:** Google Cloud redirect URI doesn't match code
 **Solution:** Add exact URI to Google Cloud Console
 
 #### Issue: Backend logs show "KeyError: 'GOOGLE_CLIENT_ID'"
+
 **Cause:** Environment variable not set
 **Solution:** Add in Render environment variables
 
 #### Issue: "Module 'google_auth_oauthlib' not found"
+
 **Cause:** Dependencies not installed
 **Solution:** Check `requirements.txt` includes `google-auth-oauthlib`
 
 #### Issue: Still redirects to old broken URL
+
 **Cause:** Browser cache or deployment not complete
-**Solution:** 
+**Solution:**
+
 1. Hard refresh (Ctrl+Shift+R)
 2. Try incognito mode
 3. Wait for Render deployment to complete
@@ -153,7 +164,7 @@ The backend needs the new columns. Check if migration ran:
 ```bash
 # SSH into Render (if possible) or check logs for:
 # "Added column: calendar_token"
-# "Added column: calendar_refresh_token"  
+# "Added column: calendar_refresh_token"
 # "Added column: calendar_token_expiry"
 ```
 
@@ -188,6 +199,7 @@ curl https://rushigo-backend.onrender.com/api/calendar/status \
 ## If Still Broken
 
 Share these with me:
+
 1. Screenshot of black page
 2. Render logs when clicking connect button
 3. Screenshot of Render environment variables (blur secrets)
