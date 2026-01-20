@@ -42,51 +42,83 @@ class CalendarService:
         """Authenticate with Google Calendar API using OAuth2"""
         creds = None
         
-        # Load token if it exists
-        if self.token_path.exists():
-            try:
-                creds = Credentials.from_authorized_user_file(str(self.token_path), SCOPES)
-            except Exception as e:
-                logger.warning(f"Failed to load token: {e}")
-                creds = None
+        # Check if we're in production (environment variables set)
+        is_production = os.getenv('RENDER') or os.getenv('CALENDAR_CREDENTIALS_JSON')
         
-        # If there are no (valid) credentials, let the user log in
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                try:
-                    creds.refresh(Request())
-                    logger.info("Refreshed Calendar credentials")
+        if is_production:
+            # Try to load credentials from environment variable
+            try:
+                import json
+                creds_json = os.getenv('CALENDAR_CREDENTIALS_JSON')
+                if not creds_json:
+                    logger.warning("CALENDAR_CREDENTIALS_JSON environment variable not set")
+                    raise FileNotFoundError("Calendar credentials not configured in environment")
+                
+                creds_dict = json.loads(creds_json)
+                creds = Credentials.from_authorized_user_info(creds_dict, SCOPES)
+                
+                # Try to refresh if expired
+                if creds and creds.expired and creds.refresh_token:
                     try:
+                        creds.refresh(Request())
+                        logger.info("Refreshed Calendar credentials in production")
+                    except Exception as e:
+                        logger.error(f"Failed to refresh credentials in production: {e}")
+                        raise RuntimeError(f"Calendar token expired and refresh failed: {e}")
+                
+                logger.info("Loaded Calendar credentials from environment")
+            except Exception as e:
+                logger.error(f"Failed to load credentials from environment: {e}")
+                raise FileNotFoundError(
+                    "Google Calendar API is not set up. Please contact administrator to enable Calendar API in Google Cloud Console."
+                )
+        else:
+            # Local development: use file-based authentication
+            # Load token if it exists
+            if self.token_path.exists():
+                try:
+                    creds = Credentials.from_authorized_user_file(str(self.token_path), SCOPES)
+                except Exception as e:
+                    logger.warning(f"Failed to load token: {e}")
+                    creds = None
+            
+            # If there are no (valid) credentials, let the user log in
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    try:
+                        creds.refresh(Request())
+                        logger.info("Refreshed Calendar credentials")
+                        try:
+                            with open(self.token_path, 'w') as token:
+                                token.write(creds.to_json())
+                            logger.info("Saved refreshed token")
+                        except (OSError, IOError) as e:
+                            logger.warning(f"Could not save refreshed token: {e}")
+                    except Exception as e:
+                        logger.error(f"Failed to refresh credentials: {e}")
+                        raise RuntimeError(f"Calendar token expired and refresh failed: {e}")
+                
+                if not creds or not creds.valid:
+                    if not self.credentials_path.exists():
+                        raise FileNotFoundError(
+                            f"Calendar credentials file not found at {self.credentials_path}. "
+                            "Please use the same credentials.json from Gmail setup."
+                        )
+                    
+                    # Run local OAuth flow
+                    try:
+                        flow = InstalledAppFlow.from_client_secrets_file(
+                            str(self.credentials_path), SCOPES
+                        )
+                        creds = flow.run_local_server(port=0)
+                        
+                        # Save the credentials for next run
                         with open(self.token_path, 'w') as token:
                             token.write(creds.to_json())
-                        logger.info("Saved refreshed token")
-                    except (OSError, IOError) as e:
-                        logger.warning(f"Could not save refreshed token: {e}")
-                except Exception as e:
-                    logger.error(f"Failed to refresh credentials: {e}")
-                    raise RuntimeError(f"Calendar token expired and refresh failed: {e}")
-            
-            if not creds or not creds.valid:
-                if not self.credentials_path.exists():
-                    raise FileNotFoundError(
-                        f"Calendar credentials file not found at {self.credentials_path}. "
-                        "Please use the same credentials.json from Gmail setup."
-                    )
-                
-                # Run local OAuth flow
-                try:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        str(self.credentials_path), SCOPES
-                    )
-                    creds = flow.run_local_server(port=0)
-                    
-                    # Save the credentials for next run
-                    with open(self.token_path, 'w') as token:
-                        token.write(creds.to_json())
-                    logger.info("Created new Calendar token")
-                except Exception as e:
-                    logger.error(f"Authentication failed: {e}")
-                    raise
+                        logger.info("Created new Calendar token")
+                    except Exception as e:
+                        logger.error(f"Authentication failed: {e}")
+                        raise
         
         # Build the service
         try:
