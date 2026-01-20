@@ -230,10 +230,6 @@ async def calendar_oauth_callback(
             url=f"{settings.FRONTEND_URL}/?calendar_error=server_error&message={str(e)[:100]}",
             status_code=status.HTTP_302_FOUND
         )
-        return RedirectResponse(
-            url=f"{settings.FRONTEND_URL}/?calendar_error=true",
-            status_code=status.HTTP_302_FOUND
-        )
 
 
 @router.post("/disconnect")
@@ -247,10 +243,10 @@ async def disconnect_calendar(
     Removes stored OAuth tokens and disables calendar sync
     """
     try:
-        current_user.calendar_token = None
-        current_user.calendar_refresh_token = None
-        current_user.calendar_token_expiry = None
-        current_user.calendar_sync_enabled = False
+        setattr(current_user, 'calendar_token', None)
+        setattr(current_user, 'calendar_refresh_token', None)
+        setattr(current_user, 'calendar_token_expiry', None)
+        setattr(current_user, 'calendar_sync_enabled', False)
         
         db.commit()
         
