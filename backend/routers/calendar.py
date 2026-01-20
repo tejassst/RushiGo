@@ -32,9 +32,6 @@ SCOPES = [
     'https://www.googleapis.com/auth/calendar.events'
 ]
 
-# Get frontend URL for redirect
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')
-
 
 @router.get("/connect")
 async def initiate_calendar_oauth(
@@ -44,32 +41,42 @@ async def initiate_calendar_oauth(
     """
     Initiate OAuth flow for user to connect their Google Calendar
     
-    Returns authorization URL that frontend should redirect user to
+    Redirects user directly to Google OAuth consent screen
     """
     try:
-        # Create OAuth flow
-        flow = Flow.from_client_secrets_file(
-            'credentials.json',
+        # Build client config from environment variables
+        client_config = {
+            "web": {
+                "client_id": settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID'),
+                "client_secret": settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET'),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"]
+            }
+        }
+        
+        # Create flow from client config
+        flow = Flow.from_client_config(
+            client_config,
             scopes=SCOPES,
-            redirect_uri=f"{settings.API_PREFIX}/calendar/callback"
+            redirect_uri=f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"
         )
         
         # Generate authorization URL with user ID in state
         authorization_url, state = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true',
+            prompt='consent',  # Force consent screen to get refresh token
             state=str(current_user.id)  # Pass user ID to callback
         )
         
-        logger.info(f"Generated OAuth URL for user {current_user.id}")
+        logger.info(f"Generated OAuth URL for user {current_user.id}, redirect_uri: {flow.redirect_uri}")
         
-        return {
-            "authorization_url": authorization_url,
-            "message": "Redirect user to authorization_url to connect calendar"
-        }
+        # Redirect directly to Google OAuth
+        return RedirectResponse(url=authorization_url)
         
     except Exception as e:
-        logger.error(f"Failed to initiate OAuth: {e}")
+        logger.error(f"Failed to initiate OAuth: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to initiate calendar connection: {str(e)}"
@@ -94,26 +101,39 @@ async def calendar_oauth_callback(
         user = db.query(User).filter(User.id == user_id).first()
         
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+            logger.error(f"User {user_id} not found in OAuth callback")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/?calendar_error=user_not_found",
+                status_code=status.HTTP_302_FOUND
             )
         
-        # Exchange authorization code for tokens
-        flow = Flow.from_client_secrets_file(
-            'credentials.json',
+        # Build client config from environment variables
+        client_config = {
+            "web": {
+                "client_id": settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID'),
+                "client_secret": settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET'),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"]
+            }
+        }
+        
+        # Create flow from client config
+        flow = Flow.from_client_config(
+            client_config,
             scopes=SCOPES,
-            redirect_uri=f"{settings.API_PREFIX}/calendar/callback"
+            redirect_uri=f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"
         )
         
+        # Exchange authorization code for tokens
         flow.fetch_token(code=code)
         credentials = flow.credentials
         
         # Store tokens in user's account
-        user.calendar_token = credentials.token
-        user.calendar_refresh_token = credentials.refresh_token
-        user.calendar_token_expiry = credentials.expiry
-        user.calendar_sync_enabled = True  # Auto-enable sync on connection
+        setattr(user, 'calendar_token', credentials.token)
+        setattr(user, 'calendar_refresh_token', credentials.refresh_token)
+        setattr(user, 'calendar_token_expiry', credentials.expiry)
+        setattr(user, 'calendar_sync_enabled', True)  # Auto-enable sync on connection
         
         db.commit()
         
@@ -121,15 +141,15 @@ async def calendar_oauth_callback(
         
         # Redirect back to frontend with success message
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/?calendar_connected=true",
+            url=f"{settings.FRONTEND_URL}/?calendar_connected=true",
             status_code=status.HTTP_302_FOUND
         )
         
     except Exception as e:
-        logger.error(f"OAuth callback failed: {e}")
+        logger.error(f"OAuth callback failed: {e}", exc_info=True)
         # Redirect to frontend with error
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/?calendar_error=true",
+            url=f"{settings.FRONTEND_URL}/?calendar_error=true",
             status_code=status.HTTP_302_FOUND
         )
 
@@ -175,16 +195,14 @@ async def get_calendar_status(
     
     Returns connection status and token expiry
     """
-    is_connected = bool(
-        current_user.calendar_token and 
-        current_user.calendar_refresh_token
-    )
+    has_token = getattr(current_user, 'calendar_token', None) is not None
+    has_refresh_token = getattr(current_user, 'calendar_refresh_token', None) is not None
+    is_connected = has_token and has_refresh_token
     
     return {
-        "is_connected": is_connected,
-        "sync_enabled": current_user.calendar_sync_enabled,
-        "calendar_id": current_user.calendar_id or "primary",
-        "token_expiry": current_user.calendar_token_expiry.isoformat() if current_user.calendar_token_expiry else None
+        "connected": is_connected,
+        "sync_enabled": getattr(current_user, 'calendar_sync_enabled', False),
+        "calendar_id": getattr(current_user, 'calendar_id', None) or "primary"
     }
 
 

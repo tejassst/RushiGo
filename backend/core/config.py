@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     DATABASE_URL: Annotated[str, Field(description="Database connection URL", validate_default=True)] = Field(default="")
     ALLOWED_ORIGINS: Union[str, List[str]] = Field(default="")
     GEMINI_API_KEY: Annotated[str, Field(description="Gemini API Key", validate_default=True)] = Field(default="")
+    BACKEND_URL: str = Field(default="http://localhost:8000")
+    FRONTEND_URL: str = Field(default="http://localhost:5174")
     
     # Supabase configuration
     SUPABASE_URL: str = Field(default="")
@@ -19,6 +21,11 @@ class Settings(BaseSettings):
     GMAIL_CREDENTIALS_PATH: str = Field(default="/etc/secrets/credentials.json")
     GMAIL_TOKEN_PATH: str = Field(default="/etc/secrets/token.json")
     FROM_EMAIL: str = Field(default="RushiGo Notifications")
+    
+    # Google Calendar OAuth
+    GOOGLE_CLIENT_ID: str = Field(default="")
+    GOOGLE_CLIENT_SECRET: str = Field(default="")
+    CALENDAR_CREDENTIALS_JSON: str = Field(default="")
 
     @field_validator("DATABASE_URL", "GEMINI_API_KEY")
     def validate_required_fields(cls, value: str) -> str:
