@@ -22,9 +22,10 @@ export function CalendarSyncSettings() {
   const [preferences, setPreferences] = useState<CalendarPreferences>({
     calendar_sync_enabled: false,
   });
-  const [connectionStatus, setConnectionStatus] = useState<CalendarConnectionStatus>({
-    connected: false,
-  });
+  const [connectionStatus, setConnectionStatus] =
+    useState<CalendarConnectionStatus>({
+      connected: false,
+    });
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -68,7 +69,7 @@ export function CalendarSyncSettings() {
 
     const popup = window.open(
       apiClient.getCalendarConnectUrl(),
-      'Google Calendar OAuth',
+      "Google Calendar OAuth",
       `width=${width},height=${height},left=${left},top=${top}`
     );
 
@@ -94,7 +95,7 @@ export function CalendarSyncSettings() {
       await apiClient.disconnectCalendar();
       setConnectionStatus({ connected: false });
       setPreferences({ ...preferences, calendar_sync_enabled: false });
-      
+
       toast({
         title: "Calendar Disconnected",
         description: "Your Google Calendar has been disconnected",
@@ -165,7 +166,8 @@ export function CalendarSyncSettings() {
           <CardTitle>Google Calendar Sync</CardTitle>
         </div>
         <CardDescription>
-          Automatically sync your RushiGo deadlines to your personal Google Calendar
+          Automatically sync your RushiGo deadlines to your personal Google
+          Calendar
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -185,7 +187,9 @@ export function CalendarSyncSettings() {
                   <span className="text-sm font-medium">Connected</span>
                 </div>
               ) : (
-                <span className="text-sm text-muted-foreground">Not Connected</span>
+                <span className="text-sm text-muted-foreground">
+                  Not Connected
+                </span>
               )}
             </div>
           </div>
