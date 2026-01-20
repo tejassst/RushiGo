@@ -83,6 +83,15 @@ export interface TeamDeadline extends Deadline {
   team_id?: number;
 }
 
+export interface CalendarPreferences {
+  calendar_sync_enabled: boolean;
+  calendar_id?: string;
+}
+
+export interface UpdateCalendarPreferencesRequest {
+  calendar_sync_enabled: boolean;
+}
+
 export class ApiClient {
   private token: string | null = null;
 
@@ -274,6 +283,20 @@ export class ApiClient {
   async removeDeadlineFromTeam(deadlineId: number): Promise<Deadline> {
     return this.request<Deadline>(`/deadlines/${deadlineId}/remove-from-team`, {
       method: 'POST',
+    });
+  }
+
+  // Calendar Preferences
+  async getCalendarPreferences(): Promise<CalendarPreferences> {
+    return this.request<CalendarPreferences>('/users/me/calendar-preferences');
+  }
+
+  async updateCalendarPreferences(
+    preferences: UpdateCalendarPreferencesRequest
+  ): Promise<CalendarPreferences> {
+    return this.request<CalendarPreferences>('/users/me/calendar-preferences', {
+      method: 'PUT',
+      body: JSON.stringify(preferences),
     });
   }
 }

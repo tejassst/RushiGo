@@ -8,10 +8,13 @@ import {
   LogOut,
   User,
   Bell,
+  Calendar,
 } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationInfoModal } from "./NotificationInfoModal";
+import { CalendarSyncSettings } from "./CalendarSyncSettings";
 
 interface HeaderProps {
   onNavigate: (
@@ -34,6 +37,7 @@ export function Header({
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isCalendarSettingsOpen, setIsCalendarSettingsOpen] = useState(false);
   const { user } = useAuth();
 
   const navItems = [
@@ -106,6 +110,16 @@ export function Header({
                   <Bell className="h-5 w-5 animate-pulse" />
                   <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full animate-ping"></span>
                   <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+                </Button>
+
+                {/* Calendar Settings Icon */}
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsCalendarSettingsOpen(true)}
+                  className="text-gray-700 hover:text-purple-600 hover:bg-purple-50 p-2"
+                  title="Calendar Sync Settings"
+                >
+                  <Calendar className="h-5 w-5" />
                 </Button>
 
                 <div className="flex items-center space-x-2 text-gray-700">
@@ -198,6 +212,19 @@ export function Header({
                       Notification Settings
                     </Button>
 
+                    {/* Calendar Settings for Mobile */}
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setIsCalendarSettingsOpen(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="justify-start w-full text-gray-700 hover:text-purple-600 hover:bg-purple-50"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Calendar Sync
+                    </Button>
+
                     <div className="flex items-center space-x-2 text-gray-700 px-3 py-2">
                       <User className="h-4 w-4" />
                       <span className="text-sm">
@@ -252,6 +279,44 @@ export function Header({
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
       />
+
+      {/* Calendar Settings Modal */}
+      {isCalendarSettingsOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <Calendar className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">Calendar Sync</h2>
+                      <p className="text-sm text-white/80">
+                        Manage Google Calendar integration
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setIsCalendarSettingsOpen(false)}
+                    className="text-white hover:bg-white/20 p-2 rounded-lg"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <CalendarSyncSettings />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </header>
   );
 }

@@ -8,3 +8,4 @@ export * from './badge';
 export * from './deadline-card';
 export * from './textarea';
 export * from './select';
+export * from './switch';

@@ -16,22 +16,24 @@ async def api_health_check():
 
 ### Current Behavior:
 
-| URL | Method | Works? | Why |
-|-----|--------|--------|-----|
-| `https://rushigo-backend.onrender.com/health` | GET | ✅ YES | Root endpoint exists |
-| `https://rushigo-backend.onrender.com/api/health` | GET | ✅ YES | API prefix endpoint exists |
-| `https://rushigo-backend.onrender.com/health` | HEAD | ❌ 405 | **Only GET allowed, not HEAD** |
+| URL                                               | Method | Works? | Why                            |
+| ------------------------------------------------- | ------ | ------ | ------------------------------ |
+| `https://rushigo-backend.onrender.com/health`     | GET    | ✅ YES | Root endpoint exists           |
+| `https://rushigo-backend.onrender.com/api/health` | GET    | ✅ YES | API prefix endpoint exists     |
+| `https://rushigo-backend.onrender.com/health`     | HEAD   | ❌ 405 | **Only GET allowed, not HEAD** |
 
 ## 🐛 The Problem
 
 **UptimeRobot uses HEAD requests by default!**
 
 Your FastAPI endpoint only allows `GET` requests:
+
 ```python
 @app.get("/health")  # ← Only allows GET, not HEAD
 ```
 
 When UptimeRobot sends a `HEAD` request:
+
 - FastAPI responds with: **405 Method Not Allowed**
 - UptimeRobot thinks: "Server is down!" 🚨
 
@@ -40,6 +42,7 @@ When UptimeRobot sends a `HEAD` request:
 ### **Option 1: Use GET in UptimeRobot (Quick Fix)**
 
 In UptimeRobot settings:
+
 1. Go to your monitor
 2. Change **"HTTP Method"** from `HEAD` to `GET`
 3. Keep URL: `https://rushigo-backend.onrender.com/health`
@@ -126,10 +129,11 @@ async def api_health_check():
    - **Keyword:** (optional) `healthy`
 
 3. **Deploy and Test:**
+
    ```bash
    # Test GET request
    curl -X GET https://rushigo-backend.onrender.com/health
-   
+
    # Test HEAD request
    curl -X HEAD https://rushigo-backend.onrender.com/health
    ```
@@ -139,12 +143,14 @@ async def api_health_check():
 ## 🧪 Testing Your Fix
 
 ### Before Fix:
+
 ```bash
 $ curl -I https://rushigo-backend.onrender.com/health
 HTTP/1.1 405 Method Not Allowed  # ❌ Fails
 ```
 
 ### After Fix:
+
 ```bash
 $ curl -I https://rushigo-backend.onrender.com/health
 HTTP/1.1 200 OK  # ✅ Success!
@@ -155,6 +161,7 @@ HTTP/1.1 200 OK  # ✅ Success!
 ## 📊 Why This Matters
 
 **HEAD requests are the standard for health checks because:**
+
 1. ✅ Faster (no response body)
 2. ✅ Lower bandwidth usage
 3. ✅ Industry standard for uptime monitoring
@@ -178,16 +185,17 @@ HTTP/1.1 200 OK  # ✅ Success!
 
 ### Which URL Should You Use?
 
-| URL | Use Case |
-|-----|----------|
-| `/health` | ✅ **Recommended** - For external monitoring (UptimeRobot, etc.) |
-| `/api/health` | ✅ Also valid - If you want consistency with other API routes |
+| URL           | Use Case                                                         |
+| ------------- | ---------------------------------------------------------------- |
+| `/health`     | ✅ **Recommended** - For external monitoring (UptimeRobot, etc.) |
+| `/api/health` | ✅ Also valid - If you want consistency with other API routes    |
 
 **Both work!** Pick one and configure UptimeRobot to use it.
 
 ### Why Both Endpoints Exist
 
 Looking at your code:
+
 - `/health` → Quick access for monitoring tools
 - `/api/health` → Consistency with other API routes under `/api` prefix
 

@@ -102,3 +102,4 @@ backend/install_and_test_*.sh
 deploy-*.sh
 cleanup-*.sh
 regenerate_*.py
+token_calendar.json

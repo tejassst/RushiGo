@@ -20,6 +20,7 @@
     "@radix-ui/react-select": "1.2.2",
     "@radix-ui/react-separator": "^1.0.3",
     "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-switch": "^1.2.6",
     "@types/node": "^20.11.25",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
