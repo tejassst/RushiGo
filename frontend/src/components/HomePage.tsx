@@ -283,6 +283,50 @@ export function HomePage({
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-50/50 backdrop-blur-sm border-t border-gray-200">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            {/* Brand */}
+            <div className="text-center md:text-left">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                RushiGo
+              </h3>
+              <p className="text-gray-600 text-sm mt-1">
+                AI-Powered Deadline Management
+              </p>
+            </div>
+
+            {/* Links */}
+            <div className="flex items-center gap-8">
+              <a
+                href="https://rushigo.tsapps.tech/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="https://rushigo.tsapps.tech/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+              >
+                Terms of Service
+              </a>
+            </div>
+
+            {/* Copyright */}
+            <div className="text-center md:text-right">
+              <p className="text-gray-600 text-sm">
+                © {new Date().getFullYear()} RushiGo. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
