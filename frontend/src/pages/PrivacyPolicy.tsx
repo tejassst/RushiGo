@@ -1,10 +1,11 @@
 export default function PrivacyPolicy() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
-      <p className="text-sm text-gray-600 mb-8">
-        Last updated: January 20, 2026
-      </p>
+    <div className="container mx-auto px-4 py-16 max-w-4xl">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 md:p-12">
+        <h1 className="text-4xl font-bold mb-6 text-gray-900">Privacy Policy</h1>
+        <p className="text-sm text-gray-600 mb-8">
+          Last updated: January 20, 2026
+        </p>
 
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
@@ -177,6 +178,7 @@ export default function PrivacyPolicy() {
           <strong>Email:</strong> reminder.rushigo@gmail.com
         </p>
       </section>
+      </div>
     </div>
   );
 }

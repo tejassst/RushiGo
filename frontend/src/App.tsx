@@ -36,26 +36,30 @@ function AppContent() {
     const handlePopState = () => {
       setCurrentRoute(window.location.pathname);
     };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   // Render special pages based on path
   if (currentRoute === "/privacy-policy") {
     return (
-      <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden">
+      <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
         <AnimatedBackground />
-        <PrivacyPolicy />
+        <div className="relative z-10">
+          <PrivacyPolicy />
+        </div>
       </div>
     );
   }
 
   if (currentRoute === "/terms-of-service") {
     return (
-      <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden">
+      <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
         <AnimatedBackground />
-        <TermsOfService />
+        <div className="relative z-10">
+          <TermsOfService />
+        </div>
       </div>
     );
   }
