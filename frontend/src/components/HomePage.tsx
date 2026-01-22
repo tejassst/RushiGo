@@ -301,18 +301,22 @@ export function HomePage({
             {/* Links */}
             <div className="flex items-center gap-8">
               <a
-                href="https://rushigo.tsapps.tech/privacy-policy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+                href="/privacy-policy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = '/privacy-policy';
+                }}
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer"
               >
                 Privacy Policy
               </a>
               <a
-                href="https://rushigo.tsapps.tech/terms-of-service"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+                href="/terms-of-service"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = '/terms-of-service';
+                }}
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer"
               >
                 Terms of Service
               </a>
