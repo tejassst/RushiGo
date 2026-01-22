@@ -27,14 +27,22 @@ function AppContent() {
     isOpen: false,
     mode: "login",
   });
+  const [currentRoute, setCurrentRoute] = useState(window.location.pathname);
 
   const { isAuthenticated, logout } = useAuth();
 
-  // Check for special routes
-  const currentPath = window.location.pathname;
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentRoute(window.location.pathname);
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Render special pages based on path
-  if (currentPath === "/privacy-policy") {
+  if (currentRoute === "/privacy-policy") {
     return (
       <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden">
         <AnimatedBackground />
@@ -43,7 +51,7 @@ function AppContent() {
     );
   }
 
-  if (currentPath === "/terms-of-service") {
+  if (currentRoute === "/terms-of-service") {
     return (
       <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden">
         <AnimatedBackground />

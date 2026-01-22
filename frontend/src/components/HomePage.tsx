@@ -300,24 +300,18 @@ export function HomePage({
 
             {/* Links */}
             <div className="flex items-center gap-8">
-              <button
-                onClick={() => {
-                  window.history.pushState({}, '', '/privacy-policy');
-                  window.location.reload();
-                }}
-                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer bg-transparent border-0"
+              <a
+                href="/privacy-policy"
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer"
               >
                 Privacy Policy
-              </button>
-              <button
-                onClick={() => {
-                  window.history.pushState({}, '', '/terms-of-service');
-                  window.location.reload();
-                }}
-                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer bg-transparent border-0"
+              </a>
+              <a
+                href="/terms-of-service"
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer"
               >
                 Terms of Service
-              </button>
+              </a>
             </div>
 
             {/* Copyright */}
