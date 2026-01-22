@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AnimatedBackground,
   Header,
@@ -11,6 +11,8 @@ import {
 import { AuthModal } from "./components/AuthModal";
 import { ToastContainer } from "./components/Toast";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import "./index.css";
 import "./App.css";
 
@@ -27,6 +29,28 @@ function AppContent() {
   });
 
   const { isAuthenticated, logout } = useAuth();
+
+  // Check for special routes
+  const currentPath = window.location.pathname;
+
+  // Render special pages based on path
+  if (currentPath === "/privacy-policy") {
+    return (
+      <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden">
+        <AnimatedBackground />
+        <PrivacyPolicy />
+      </div>
+    );
+  }
+
+  if (currentPath === "/terms-of-service") {
+    return (
+      <div className="min-h-screen w-full relative max-w-screen overflow-x-hidden">
+        <AnimatedBackground />
+        <TermsOfService />
+      </div>
+    );
+  }
 
   const handleNavigate = (
     section: "home" | "upload" | "recents" | "demo" | "team"

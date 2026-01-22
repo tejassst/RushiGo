@@ -300,26 +300,24 @@ export function HomePage({
 
             {/* Links */}
             <div className="flex items-center gap-8">
-              <a
-                href="/privacy-policy"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = '/privacy-policy';
+              <button
+                onClick={() => {
+                  window.history.pushState({}, '', '/privacy-policy');
+                  window.location.reload();
                 }}
-                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer"
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer bg-transparent border-0"
               >
                 Privacy Policy
-              </a>
-              <a
-                href="/terms-of-service"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = '/terms-of-service';
+              </button>
+              <button
+                onClick={() => {
+                  window.history.pushState({}, '', '/terms-of-service');
+                  window.location.reload();
                 }}
-                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer"
+                className="text-gray-600 hover:text-purple-600 transition-colors font-medium cursor-pointer bg-transparent border-0"
               >
                 Terms of Service
-              </a>
+              </button>
             </div>
 
             {/* Copyright */}
