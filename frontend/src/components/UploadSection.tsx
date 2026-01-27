@@ -342,13 +342,6 @@ export function UploadSection() {
                             </span>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => saveDeadline(deadline)}
-                          className="ml-4"
-                        >
-                          Save
-                        </Button>
                       </div>
                     </div>
                   ))}

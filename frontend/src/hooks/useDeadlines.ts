@@ -58,11 +58,11 @@ export function useDeadlines() {
     }
   };
 
+  // Only return scan results, do not auto-save
   const scanDocument = async (file: File) => {
     try {
       setLoading(true);
       const newDeadlines = await apiClient.scanDocument(file);
-      setDeadlines(prev => [...newDeadlines, ...prev]);
       return newDeadlines;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to scan document';
