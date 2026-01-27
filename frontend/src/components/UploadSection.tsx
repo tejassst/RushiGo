@@ -283,83 +283,79 @@ export function UploadSection() {
 
             {/* Results Display */}
             {scanComplete && (
-              <>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      <svg
-                        className="h-5 w-5 text-green-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-green-900">
-                        Scan Complete!
-                      </h4>
-                      <p className="text-sm text-green-700">
-                        Found {scanResults.length} deadline(s) in your document.
-                        {scanResults.length > 0 &&
-                          " Review and save the ones you want to track."}
-                      </p>
-                    </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-green-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-green-900">
+                      Scan Complete!
+                    </h4>
+                    <p className="text-sm text-green-700">
+                      Found {scanResults.length} deadline(s) in your document.
+                      {scanResults.length > 0 &&
+                        " Review and save the ones you want to track."}
+                    </p>
                   </div>
                 </div>
-                {scanResults.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      Extracted Deadlines
-                    </h3>
-                    <div className="grid gap-4">
-                      {scanResults.map((deadline, index) => (
-                        <div
-                          key={index}
-                          className="border rounded-lg p-4 bg-white shadow-sm"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h4 className="font-medium">{deadline.title}</h4>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {deadline.description}
-                              </p>
-                              <div className="flex items-center space-x-4 mt-2 text-sm">
-                                <span className="text-gray-500">
-                                  📅{" "}
-                                  {new Date(deadline.date).toLocaleDateString()}
-                                </span>
-                                <span
-                                  className={`px-2 py-1 rounded text-xs ${
-                                    deadline.priority === "high"
-                                      ? "bg-red-100 text-red-800"
-                                      : deadline.priority === "medium"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : "bg-green-100 text-green-800"
-                                  }`}
-                                >
-                                  {deadline.priority} priority
-                                </span>
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => saveDeadline(deadline)}
-                              className="ml-4"
+              </div>
+            )}
+
+            {scanResults.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Extracted Deadlines</h3>
+                <div className="grid gap-4">
+                  {scanResults.map((deadline, index) => (
+                    <div
+                      key={index}
+                      className="border rounded-lg p-4 bg-white shadow-sm"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{deadline.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {deadline.description}
+                          </p>
+                          <div className="flex items-center space-x-4 mt-2 text-sm">
+                            <span className="text-gray-500">
+                              📅 {new Date(deadline.date).toLocaleDateString()}
+                            </span>
+                            <span
+                              className={`px-2 py-1 rounded text-xs ${
+                                deadline.priority === "high"
+                                  ? "bg-red-100 text-red-800"
+                                  : deadline.priority === "medium"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-green-100 text-green-800"
+                              }`}
                             >
-                              Save
-                            </Button>
+                              {deadline.priority} priority
+                            </span>
                           </div>
                         </div>
-                      ))}
+                        <Button
+                          size="sm"
+                          onClick={() => saveDeadline(deadline)}
+                          className="ml-4"
+                        >
+                          Save
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
