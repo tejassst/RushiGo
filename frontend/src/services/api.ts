@@ -220,11 +220,13 @@ export class ApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
+    // Do NOT set Content-Type header when sending FormData; browser will set it with boundary
+    const headers: Record<string, string> = {};
+    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+
     const response = await fetch(`${API_BASE_URL}/deadlines/scan-document`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-      },
+      headers,
       body: formData,
     });
 
