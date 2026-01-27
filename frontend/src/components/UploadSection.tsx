@@ -188,7 +188,7 @@ export function UploadSection() {
                 Drag and drop your files here
               </p>
               <p className="text-gray-500 mb-6">
-                Supports JPG, PNG, GIF, and PDF files
+                Supports PDF, TXT, CSV, DOC, and DOCX files.
               </p>
               <Button
                 onClick={() => fileInputRef.current?.click()}
@@ -334,8 +334,8 @@ export function UploadSection() {
                                 deadline.priority === "high"
                                   ? "bg-red-100 text-red-800"
                                   : deadline.priority === "medium"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-green-100 text-green-800"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-green-100 text-green-800"
                               }`}
                             >
                               {deadline.priority} priority
