@@ -26,11 +26,20 @@ export const ModifyDeadlineModal: React.FC<Props> = ({
   onClose,
   onSave,
 }) => {
+  // Convert backend ISO date to local datetime-local format for input
+  const getLocalDateTimeString = (isoString: string) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    // Pad to 'YYYY-MM-DDTHH:MM' format
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
   const [form, setForm] = useState<UpdateDeadlineRequest>({
     title: deadline.title,
     description: deadline.description,
     course: deadline.course,
-    date: deadline.date,
+    date: getLocalDateTimeString(deadline.date),
     priority: deadline.priority,
     estimated_hours: deadline.estimated_hours,
   });
@@ -51,7 +60,14 @@ export const ModifyDeadlineModal: React.FC<Props> = ({
     setLoading(true);
     setError(null);
     try {
-      await onSave(deadline.id, form);
+      // Convert local datetime-local string to UTC ISO string before saving
+      let saveForm = { ...form };
+      if (form.date) {
+        // 'YYYY-MM-DDTHH:MM' local -> Date -> ISO
+        const localDate = new Date(form.date);
+        saveForm.date = localDate.toISOString();
+      }
+      await onSave(deadline.id, saveForm);
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to update deadline");
@@ -103,7 +119,7 @@ export const ModifyDeadlineModal: React.FC<Props> = ({
             <input
               name="date"
               type="datetime-local"
-              value={form.date ? form.date.slice(0, 16) : ""}
+              value={form.date}
               onChange={handleChange}
               className="w-full border rounded px-2 py-1"
               required
