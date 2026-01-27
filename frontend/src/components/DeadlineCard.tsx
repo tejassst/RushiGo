@@ -6,12 +6,14 @@ type Props = {
   deadline: Deadline;
   onUpdate?: (updatedDeadline: Deadline) => void;
   onDelete?: (id: number) => void;
+  onModify?: (deadline: Deadline) => void;
 };
 
 export const DeadlineCard: React.FC<Props> = ({
   deadline,
   onUpdate,
   onDelete,
+  onModify,
 }) => {
   const formatDateTime = () => {
     try {
@@ -72,8 +74,8 @@ export const DeadlineCard: React.FC<Props> = ({
             deadline.priority === "high"
               ? "bg-red-100 text-red-800"
               : deadline.priority === "medium"
-              ? "bg-yellow-100 text-yellow-800"
-              : "bg-green-100 text-green-800"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-green-100 text-green-800"
           }`}
         >
           {deadline.priority.toUpperCase()}
@@ -138,6 +140,12 @@ export const DeadlineCard: React.FC<Props> = ({
             Mark Incomplete
           </button>
         )}
+        <button
+          onClick={() => onModify?.(deadline)}
+          className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+        >
+          Modify
+        </button>
         <button
           onClick={() => onDelete?.(deadline.id)}
           className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"

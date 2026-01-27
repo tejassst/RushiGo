@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DeadlineCard } from "./DeadlineCard";
+import ModifyDeadlineModal from "./ModifyDeadlineModal";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import {
@@ -62,6 +63,10 @@ export function RecentsSection() {
     TransformedDeadline[]
   >([]);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [modifyModalOpen, setModifyModalOpen] = useState(false);
+  const [selectedDeadline, setSelectedDeadline] = useState<APIDeadline | null>(
+    null
+  );
   const [formData, setFormData] = useState<CreateDeadlineRequest>({
     title: "",
     description: "",
@@ -110,6 +115,20 @@ export function RecentsSection() {
       await fetchDeadlines();
     } catch (error) {
       console.error("Failed to update deadline:", error);
+    }
+  };
+
+  const handleModify = (deadline: APIDeadline) => {
+    setSelectedDeadline(deadline);
+    setModifyModalOpen(true);
+  };
+
+  const handleSaveModified = async (id: number, updates: any) => {
+    try {
+      await apiClient.updateDeadline(id, updates);
+      await fetchDeadlines();
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -438,6 +457,7 @@ export function RecentsSection() {
                 deadline={originalDeadline}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
+                onModify={handleModify}
               />
             </div>
           ) : null;
@@ -445,6 +465,18 @@ export function RecentsSection() {
       </div>
 
       {/* Results summary */}
+      {/* Modify Deadline Modal */}
+      {selectedDeadline && (
+        <ModifyDeadlineModal
+          deadline={selectedDeadline}
+          open={modifyModalOpen}
+          onClose={() => {
+            setModifyModalOpen(false);
+            setSelectedDeadline(null);
+          }}
+          onSave={handleSaveModified}
+        />
+      )}
       <div className="text-center">
         <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
           <div className="flex items-center justify-center space-x-2 mb-3">
