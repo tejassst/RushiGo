@@ -4,6 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status, File, U
 from sqlalchemy.orm import Session
 import os
 import logging
+import uuid
+import redis
+import json
 
 from db.database import get_db
 from models.deadline import Deadline
@@ -16,7 +19,14 @@ from services.document_processor import DocumentProcessor
 from services.calendar_service import get_calendar_service
 from core.config import settings
 
+
 logger = logging.getLogger(__name__)
+
+# --- Redis Setup ---
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
 
 # Initialize document processor with Gemini API key
 document_processor = DocumentProcessor(settings.GEMINI_API_KEY)
@@ -262,29 +272,26 @@ async def delete_deadline(
             detail="Failed to delete deadline"
         )
 
-@router.post("/scan-document", response_model=List[DeadlineResponse])
+
+# --- Redis-backed scan-document endpoint ---
+@router.post("/scan-document")
 async def scan_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Scan a document for deadlines and create them automatically using LLM
+    Scan a document for deadlines, store them temporarily in Redis, and return a temp_id for later saving.
     """
     try:
-        # Validate file type
         allowed_types = ["application/pdf", "text/plain", "text/csv", "application/msword", 
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
-        
         if file.content_type not in allowed_types:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unsupported file type: {file.content_type}. Supported types: PDF, TXT, CSV, DOC, DOCX"
             )
-        
         content = await file.read()
-        
-        # Extract text based on file type
         if file.content_type == "application/pdf":
             text_content = document_processor.extract_text_from_pdf(content)
         elif file.content_type in ["text/plain", "text/csv"]:
@@ -299,7 +306,6 @@ async def scan_document(
                         detail="Cannot decode text file. Please ensure it's in UTF-8 or Latin-1 encoding."
                     )
         else:
-            # For other document types, try to decode as text (basic fallback)
             try:
                 text_content = content.decode('utf-8')
             except UnicodeDecodeError:
@@ -307,41 +313,74 @@ async def scan_document(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Cannot process {file.content_type} files yet. Please convert to PDF or TXT format."
                 )
-        
         if not text_content.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No text content found in the document"
             )
-        
-        # Extract deadlines using LLM
         extracted_deadlines = await document_processor.extract_deadlines(text_content)
-        
         if not extracted_deadlines:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="No deadlines found in document"
             )
-        
-        # Do NOT save deadlines to the database, just return them for review
-        # Return as list of dicts matching DeadlineResponse schema
-        return [
+        # Convert to list of dicts
+        deadline_dicts = [
             {
                 "title": d.title,
                 "description": d.description,
                 "course": d.course,
-                "date": d.date,
+                "date": d.date.isoformat() if hasattr(d.date, 'isoformat') else str(d.date),
                 "priority": d.priority,
                 "estimated_hours": getattr(d, "estimated_hours", 0),
             }
             for d in extracted_deadlines
         ]
-            
+        temp_id = str(uuid.uuid4())
+        redis_client.setex(f"scanned:{temp_id}", 3600, json.dumps(deadline_dicts))  # 1 hour expiry
+        return {"temp_id": temp_id, "deadlines": deadline_dicts}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error processing document: {str(e)}"
         )
+
+# --- Save selected scanned deadlines from Redis ---
+@router.post("/save-scanned")
+async def save_scanned(
+    temp_id: str,
+    selected_indexes: List[int],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Save selected deadlines (by index) from a previously scanned document (stored in Redis).
+    """
+    raw = redis_client.get(f"scanned:{temp_id}")
+    if not raw:
+        raise HTTPException(status_code=404, detail="Session expired or not found")
+    all_deadlines = json.loads(raw)
+    to_save = [all_deadlines[i] for i in selected_indexes if i < len(all_deadlines)]
+    saved = []
+    for d in to_save:
+        try:
+            new_deadline = Deadline(
+                title=d["title"],
+                description=d["description"],
+                course=d["course"],
+                date=datetime.fromisoformat(d["date"]),
+                priority=d["priority"],
+                estimated_hours=d.get("estimated_hours", 0),
+                user_id=current_user.id
+            )
+            db.add(new_deadline)
+            db.commit()
+            db.refresh(new_deadline)
+            saved.append({"id": new_deadline.id, **d})
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to save deadline: {e}")
+    return {"status": "saved", "count": len(saved), "saved_deadlines": saved}
 
 @router.post("/{deadline_id}/assign-team/{team_id}", response_model=DeadlineResponse)
 async def assign_deadline_to_team(

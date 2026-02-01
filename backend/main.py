@@ -8,8 +8,12 @@ import logging
 import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+import uuid
+import redis
+import json
 
 from core.config import settings
 from routers import user, deadline, team, notifications
@@ -93,7 +97,9 @@ app.include_router(user.router, prefix=settings.API_PREFIX)
 app.include_router(deadline.router, prefix=settings.API_PREFIX)
 app.include_router(team.router, prefix=settings.API_PREFIX)
 app.include_router(notifications.router, prefix=settings.API_PREFIX)
+
 app.include_router(calendar_router.router, prefix=settings.API_PREFIX)
+
 
 @app.api_route("/health", methods=["GET", "HEAD", "OPTIONS"])
 async def health_check():
