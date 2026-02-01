@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useDeadlines } from "../hooks/useDeadlines";
 import { useToast } from "../hooks/useToast";
+import { apiClient } from "../services/api";
 
 // Get API base URL from environment variable
 const API_BASE_URL =
@@ -46,6 +47,22 @@ export function UploadSection() {
       setScanResults((prev) =>
         prev.filter((_, index) => prev.indexOf(deadline) !== index)
       );
+
+      // Sync all deadlines to calendar after saving
+      try {
+        const syncResult = await apiClient.syncAllDeadlines();
+        toast({
+          title: "Calendar Sync",
+          description: syncResult.message || "Synced deadlines to calendar.",
+        });
+      } catch (syncErr: any) {
+        toast({
+          title: "Calendar Sync Failed",
+          description:
+            syncErr?.message || "Could not sync deadlines to calendar.",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
       toast({
         title: "Save Failed ❌",

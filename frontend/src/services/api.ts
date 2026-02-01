@@ -98,6 +98,12 @@ export interface CalendarConnectionStatus {
 }
 
 export class ApiClient {
+  // Calendar sync all deadlines
+  async syncAllDeadlines(): Promise<any> {
+    return this.request<any>('/calendar/sync-all', {
+      method: 'POST',
+    });
+  }
   private token: string | null = null;
 
   constructor() {
