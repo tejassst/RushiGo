@@ -323,31 +323,19 @@ async def scan_document(
                 detail="No deadlines found in document"
             )
         
-        # Create deadlines in database
-        created_deadlines = []
-        for extracted in extracted_deadlines:
-            deadline = Deadline(
-                title=extracted.title,
-                description=extracted.description,
-                course=extracted.course,
-                date=extracted.date,
-                priority=extracted.priority,
-                user_id=current_user.id
-            )
-            db.add(deadline)
-            created_deadlines.append(deadline)
-        
-        try:
-            db.commit()
-            for deadline in created_deadlines:
-                db.refresh(deadline)
-            return created_deadlines
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create deadlines from document"
-            )
+        # Do NOT save deadlines to the database, just return them for review
+        # Return as list of dicts matching DeadlineResponse schema
+        return [
+            {
+                "title": d.title,
+                "description": d.description,
+                "course": d.course,
+                "date": d.date,
+                "priority": d.priority,
+                "estimated_hours": getattr(d, "estimated_hours", 0),
+            }
+            for d in extracted_deadlines
+        ]
             
     except Exception as e:
         raise HTTPException(
