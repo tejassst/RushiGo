@@ -9,7 +9,7 @@ credentials.json
 token.json
 backend/credentials.json
 backend/token.json
-
+backend/credentials_desktop.json
 # Python
 __pycache__/
 *.py[cod]
