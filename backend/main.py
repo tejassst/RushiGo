@@ -1,4 +1,11 @@
+import os
+print('Contents of /etc/secrets:', os.listdir('/etc/secrets/'))
+if os.path.isdir('/etc/secrets/token.json'):
+    print('token.json is a directory:', os.listdir('/etc/secrets/token.json'))
+else:
+    print('token.json is a file')
 import logging
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
