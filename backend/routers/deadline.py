@@ -283,10 +283,13 @@ async def scan_document(
     """
     Scan a document for deadlines, store them temporarily in Redis, and return a temp_id for later saving.
     """
+    import logging
+    logger = logging.getLogger(__name__)
     try:
         allowed_types = ["application/pdf", "text/plain", "text/csv", "application/msword", 
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
         if file.content_type not in allowed_types:
+            logger.error(f"Unsupported file type: {file.content_type}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unsupported file type: {file.content_type}. Supported types: PDF, TXT, CSV, DOC, DOCX"
@@ -301,6 +304,7 @@ async def scan_document(
                 try:
                     text_content = content.decode('latin-1')
                 except UnicodeDecodeError:
+                    logger.error("Cannot decode text file. Not UTF-8 or Latin-1.")
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="Cannot decode text file. Please ensure it's in UTF-8 or Latin-1 encoding."
@@ -309,22 +313,24 @@ async def scan_document(
             try:
                 text_content = content.decode('utf-8')
             except UnicodeDecodeError:
+                logger.error(f"Cannot process {file.content_type} files yet. Not UTF-8.")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Cannot process {file.content_type} files yet. Please convert to PDF or TXT format."
                 )
         if not text_content.strip():
+            logger.error("No text content found in the document.")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No text content found in the document"
             )
         extracted_deadlines = await document_processor.extract_deadlines(text_content)
         if not extracted_deadlines:
+            logger.error(f"No deadlines found in document. Text: {text_content[:200]}")
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="No deadlines found in document"
             )
-        # Convert to list of dicts
         deadline_dicts = [
             {
                 "title": d.title,
@@ -338,8 +344,10 @@ async def scan_document(
         ]
         temp_id = str(uuid.uuid4())
         redis_client.setex(f"scanned:{temp_id}", 3600, json.dumps(deadline_dicts))  # 1 hour expiry
+        logger.info(f"Scan successful. temp_id={temp_id}, deadlines_found={len(deadline_dicts)}")
         return {"temp_id": temp_id, "deadlines": deadline_dicts}
     except Exception as e:
+        logger.error(f"Error processing document: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error processing document: {str(e)}"

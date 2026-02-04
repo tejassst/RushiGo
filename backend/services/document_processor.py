@@ -39,16 +39,16 @@ class DocumentProcessor:
         """
         Extract deadlines from document text using Gemini API
         """
+        import logging
+        logger = logging.getLogger(__name__)
         prompt = f"""
-        Analyze the following text and extract all deadlines and tasks(Make sure they are genuine deadlines or assignments). For each one, provide:
+        Analyze the following text and extract all deadlines and tasks (Make sure they are genuine deadlines or assignments). For each one, provide:
         1. A clear title
         2. Detailed description
         3. Course/subject name (if identifiable from context, otherwise "General")
         4. Due date (format as ISO datetime: YYYY-MM-DDTHH:MM:SS)
         5. Priority level (high/medium/low) based on urgency and importance
-        
         Return ONLY a JSON array with fields: title, description, course, date, priority
-        
         Example format:
         [
             {{
@@ -59,43 +59,35 @@ class DocumentProcessor:
                 "priority": "high"
             }}
         ]
-
         Text to analyze:
         {document_text}
         """
-        
+        last_gemini_response = None
         try:
-            # Run the synchronous API call in a thread pool
             def generate_content():
                 response = self.model.generate_content(prompt)
                 return response.text
-            
-            # Use asyncio to run the sync function in a thread pool
             loop = asyncio.get_event_loop()
             content = await loop.run_in_executor(None, generate_content)
-            
-            # Clean up the response to ensure it's valid JSON
+            last_gemini_response = content
             content = content.strip()
             if content.startswith('```json'):
                 content = content.replace('```json', '').replace('```', '').strip()
             elif content.startswith('```'):
                 content = content.replace('```', '').strip()
-            
-            # Parse the JSON response and create ExtractedDeadline objects
-            deadlines_data = json.loads(content)
-            
+            try:
+                deadlines_data = json.loads(content)
+            except Exception as json_err:
+                logger.error(f"Gemini API returned invalid JSON: {content}")
+                logger.error(f"JSON parsing error: {json_err}")
+                return []
             extracted = []
             for data in deadlines_data:
                 try:
-                    # Handle different date formats
                     date_str = data['date']
                     if 'T' not in date_str:
-                        # Add time if only date is provided
                         date_str += 'T23:59:00'
-                    
-                    # Parse the date
                     date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                    
                     extracted.append(ExtractedDeadline(
                         title=data['title'],
                         description=data['description'],
@@ -104,11 +96,11 @@ class DocumentProcessor:
                         priority=data['priority'].lower()
                     ))
                 except (KeyError, ValueError) as e:
-                    print(f"Error parsing deadline data: {data}, Error: {str(e)}")
+                    logger.error(f"Error parsing deadline data: {data}, Error: {str(e)}")
                     continue
-            
             return extracted
-            
         except Exception as e:
-            print(f"Error processing document with Gemini API: {str(e)}")
+            logger.error(f"Error processing document with Gemini API: {str(e)}")
+            if last_gemini_response:
+                logger.error(f"Last Gemini response: {last_gemini_response}")
             return []

@@ -22,47 +22,44 @@ export function UploadSection() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanResults, setScanResults] = useState<any[]>([]);
+  const [scanTempId, setScanTempId] = useState<string | null>(null);
   const [scanComplete, setScanComplete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const { createDeadline, error } = useDeadlines();
 
-  const saveDeadline = async (deadline: any) => {
-    try {
-      await createDeadline({
-        title: deadline.title,
-        description: deadline.description,
-        date: deadline.date,
-        priority: deadline.priority,
-        estimated_hours: deadline.estimated_hours,
+  const saveDeadline = async (deadline: any, index: number) => {
+    if (!scanTempId) {
+      toast({
+        title: "Error",
+        description: "No scan session found. Please rescan your document.",
+        variant: "destructive",
       });
-
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/deadlines/save-scanned`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({
+          temp_id: scanTempId,
+          selected_indexes: [index],
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save deadline");
+      }
+      const result = await response.json();
       toast({
         title: "Deadline Saved! ✅",
-        description: `"${deadline.title}" has been added to your deadlines.`,
+        description: `"${deadline.title}" has been added to your deadlines."`,
       });
-
       // Remove the saved deadline from scan results
-      setScanResults((prev) =>
-        prev.filter((_, index) => prev.indexOf(deadline) !== index)
-      );
-
-      // Sync all deadlines to calendar after saving
-      try {
-        const syncResult = await apiClient.syncAllDeadlines();
-        toast({
-          title: "Calendar Sync",
-          description: syncResult.message || "Synced deadlines to calendar.",
-        });
-      } catch (syncErr: any) {
-        toast({
-          title: "Calendar Sync Failed",
-          description:
-            syncErr?.message || "Could not sync deadlines to calendar.",
-          variant: "destructive",
-        });
-      }
+      setScanResults((prev) => prev.filter((_, i) => i !== index));
     } catch (err) {
       toast({
         title: "Save Failed ❌",
@@ -141,14 +138,16 @@ export function UploadSection() {
         throw new Error("Failed to process document");
       }
 
-      const results = await response.json();
-      setScanResults(results);
+      const data = await response.json();
+      // data: { temp_id, deadlines }
+      setScanResults(data.deadlines || []);
+      setScanTempId(data.temp_id || null);
       setScanComplete(true);
 
       // Show completion notification
       toast({
         title: "Scan Complete! ✅",
-        description: `Found ${results.length} deadline(s) in your document`,
+        description: `Found ${data.deadlines?.length || 0} deadline(s) in your document`,
         duration: 5000,
       });
     } catch (error) {
@@ -363,7 +362,7 @@ export function UploadSection() {
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => saveDeadline(deadline)}
+                          onClick={() => saveDeadline(deadline, index)}
                           className="ml-4"
                         >
                           Save
