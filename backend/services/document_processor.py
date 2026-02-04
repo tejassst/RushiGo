@@ -1,5 +1,6 @@
 from typing import List
 import google.generativeai as genai
+from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 import json
@@ -10,7 +11,7 @@ from PyPDF2 import PdfReader
 class ExtractedDeadline(BaseModel):
     title: str
     description: str
-    course: str = None
+    course: Optional[str] = None
     date: datetime
     priority: str
 
