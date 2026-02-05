@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 import uuid
-import redis
 import json
 
 from core.config import settings
@@ -20,7 +19,7 @@ from routers import user, deadline, team, notifications
 from routers import calendar as calendar_router
 from db.database import create_tables
 from models import User, Deadline, Team, Membership, Notification  # Ensure models are imported
-from services.scheduler import start_scheduler
+from services.scheduler import notification_scheduler, start_cleanup_scheduler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -122,7 +121,8 @@ async def api_health_check():
 @app.on_event("startup")
 async def startup_event():
     """Start background services when the app starts"""
-    start_scheduler()
+    notification_scheduler.start()
+    start_cleanup_scheduler()
     logger.info("Background notification scheduler started")
 
 @app.on_event("shutdown")

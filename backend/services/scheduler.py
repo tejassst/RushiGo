@@ -131,5 +131,4 @@ def start_cleanup_scheduler():
     logger.info("Temp scan cleanup scheduler started")
 
 def stop_cleanup_scheduler():
-    # No-op: schedule library does not support stopping threads cleanly
     logger.info("Temp scan cleanup scheduler stopped (manual stop not implemented)")

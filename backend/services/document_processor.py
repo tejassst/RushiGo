@@ -80,6 +80,7 @@ class DocumentProcessor:
                 content = content.replace('```', '').strip()
             try:
                 deadlines_data = json.loads(content)
+                logger.info(f"Gemini raw deadlines JSON: {deadlines_data}")
             except Exception as json_err:
                 logger.error(f"Gemini API returned invalid JSON: {content}")
                 logger.error(f"JSON parsing error: {json_err}")
