@@ -1,11 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response, status, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
 import os
 import logging
 import uuid
-import redis
 import json
 
 from db.database import get_db
@@ -13,6 +12,7 @@ from models.deadline import Deadline
 from models.user import User
 from models.team import Team
 from models.membership import Membership
+from models.temp_scan import TempScan
 from schemas.deadline import DeadlineCreate, DeadlineResponse, DeadlineUpdate
 from auth.oauth2 import get_current_user
 from services.document_processor import DocumentProcessor
@@ -23,10 +23,7 @@ from core.config import settings
 logger = logging.getLogger(__name__)
 
 # --- Redis Setup ---
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_DB = int(os.getenv("REDIS_DB", 0))
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+# Removed Redis client setup as per the code change suggestion
 
 # Initialize document processor with Gemini API key
 document_processor = DocumentProcessor(settings.GEMINI_API_KEY)
@@ -281,7 +278,7 @@ async def scan_document(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Scan a document for deadlines, store them temporarily in Redis, and return a temp_id for later saving.
+    Scan a document for deadlines, store them temporarily in database, and return a temp_id for later saving.
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -343,8 +340,19 @@ async def scan_document(
             for d in extracted_deadlines
         ]
         logger.info(f"Deadlines to be saved in Redis (temp_id will be generated): {deadline_dicts}")
+        # Generate temp_id
         temp_id = str(uuid.uuid4())
-        redis_client.setex(f"scanned:{temp_id}", 3600, json.dumps(deadline_dicts))  # 1 hour expiry
+        
+        # Store in database instead of Redis
+        temp_scan = TempScan(
+            temp_id=temp_id,
+            user_id=current_user.id,
+            deadlines_json=json.dumps(deadline_dicts),
+            expires_at=datetime.utcnow() + timedelta(hours=1)  # 1 hour expiry
+        )
+        db.add(temp_scan)
+        db.commit()
+        
         logger.info(f"Scan successful. temp_id={temp_id}, deadlines_found={len(deadline_dicts)}")
         return {"temp_id": temp_id, "deadlines": deadline_dicts}
     except Exception as e:
@@ -363,14 +371,22 @@ async def save_scanned(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Save selected deadlines (by index) from a previously scanned document (stored in Redis).
+    Save selected deadlines (by index) from a previously scanned document (stored in database).
     """
-    raw = redis_client.get(f"scanned:{temp_id}")
-    if not raw:
+    # Retrieve from database instead of Redis
+    temp_scan = db.query(TempScan).filter(
+        TempScan.temp_id == temp_id,
+        TempScan.user_id == current_user.id,
+        TempScan.expires_at > datetime.utcnow()
+    ).first()
+    
+    if not temp_scan:
         raise HTTPException(status_code=404, detail="Session expired or not found")
-    all_deadlines = json.loads(raw)
+    
+    all_deadlines = json.loads(temp_scan.deadlines_json)
     to_save = [all_deadlines[i] for i in selected_indexes if i < len(all_deadlines)]
     saved = []
+    
     for d in to_save:
         try:
             new_deadline = Deadline(
@@ -389,7 +405,12 @@ async def save_scanned(
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to save deadline: {e}")
-    return {"status": "saved", "count": len(saved), "saved_deadlines": saved}
+    
+    # Clean up temp scan
+    db.delete(temp_scan)
+    db.commit()
+    
+    return {"status": "saved", "count": len(saved), "deadlines": saved}
 
 @router.post("/{deadline_id}/assign-team/{team_id}", response_model=DeadlineResponse)
 async def assign_deadline_to_team(
@@ -474,17 +495,3 @@ async def get_team_deadlines(
     ).all()
     
     return deadlines
-
-@router.get("/test-redis", include_in_schema=True)
-async def test_redis():
-    import redis
-    import os
-    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-    REDIS_DB = int(os.getenv("REDIS_DB", 0))
-    try:
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, socket_connect_timeout=5)
-        r.ping()
-        return {"status": "success", "message": "Connected to Redis!"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}

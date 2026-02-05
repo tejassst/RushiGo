@@ -131,22 +131,3 @@ async def shutdown_event():
     from services.scheduler import stop_scheduler
     stop_scheduler()
     logger.info("Background notification scheduler stopped")
-
-@app.get("/api/test-redis", include_in_schema=True)
-async def test_redis_public():
-    import redis
-    import os
-    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-    REDIS_DB = int(os.getenv("REDIS_DB", 0))
-    try:
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, socket_connect_timeout=5)
-        r.ping()
-        return {"status": "success", "message": "Connected to Redis!"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", 8000))  # Use PORT env var, default to 8000 for local dev
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
