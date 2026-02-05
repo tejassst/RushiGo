@@ -44,11 +44,13 @@ class DocumentProcessor:
         logger = logging.getLogger(__name__)
         prompt = f"""
         Analyze the following text and extract all deadlines and tasks (Make sure they are genuine deadlines or assignments). For each one, provide:
-        1. A clear title
-        2. Detailed description
-        3. Course/subject name (if identifiable from context, otherwise "General")
-        4. Due date (format as ISO datetime: YYYY-MM-DDTHH:MM:SS)
-        5. Priority level (high/medium/low) based on urgency and importance
+        Extract all deadlines from the following document. For each deadline, return a JSON object with these fields:
+        - title (string)
+        - description (string)
+        - course (string, or null)
+        - date (ISO8601 format, e.g. "2026-04-19T23:59:00")
+        - priority (string: "high", "medium", or "low")
+        - estimated_hours (integer, estimated hours to complete, or 0 if unknown)
         Return ONLY a JSON array with fields: title, description, course, date, priority
         Example format:
         [
