@@ -362,7 +362,10 @@ export function UploadSection() {
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => saveDeadline(deadline, index)}
+                          onClick={() => {
+                            console.log("Saving deadline:", scanTempId, index);
+                            saveDeadline(deadline, index);
+                          }}
                           className="ml-4"
                         >
                           Save

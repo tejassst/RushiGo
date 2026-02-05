@@ -6,6 +6,7 @@ import os
 import logging
 import uuid
 import json
+from pydantic import BaseModel
 
 from db.database import get_db
 from models.deadline import Deadline
@@ -363,16 +364,22 @@ async def scan_document(
         )
 
 # --- Save selected scanned deadlines from Redis ---
+class SaveScannedRequest(BaseModel):
+    temp_id: str
+    selected_indexes: List[int]
+
 @router.post("/save-scanned")
 async def save_scanned(
-    temp_id: str,
-    selected_indexes: List[int],
+    request: SaveScannedRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Save selected deadlines (by index) from a previously scanned document (stored in database).
     """
+    temp_id = request.temp_id
+    selected_indexes = request.selected_indexes
+    
     # Retrieve from database instead of Redis
     temp_scan = db.query(TempScan).filter(
         TempScan.temp_id == temp_id,

@@ -1,5 +1,8 @@
 import os
-print('Contents of /etc/secrets:', os.listdir('/etc/secrets/'))
+if os.path.isdir('/etc/secrets/'):
+    print('Contents of /etc/secrets:', os.listdir('/etc/secrets/'))
+else:
+    print('/etc/secrets/ does not exist')
 if os.path.isdir('/etc/secrets/token.json'):
     print('token.json is a directory:', os.listdir('/etc/secrets/token.json'))
 else:
@@ -128,6 +131,8 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Stop background services when the app shuts down"""
-    from services.scheduler import stop_scheduler
-    stop_scheduler()
-    logger.info("Background notification scheduler stopped")
+    from services.scheduler import stop_cleanup_scheduler, notification_scheduler
+
+    notification_scheduler.stop()
+    stop_cleanup_scheduler()
+    logger.info("Background schedulers stopped")
