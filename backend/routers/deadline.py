@@ -475,7 +475,7 @@ async def get_team_deadlines(
     
     return deadlines
 
-@router.get("/test-redis")
+@router.get("/test-redis", include_in_schema=True)
 async def test_redis():
     import redis
     import os
