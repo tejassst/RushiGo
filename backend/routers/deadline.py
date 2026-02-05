@@ -412,11 +412,7 @@ async def save_scanned(
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to save deadline: {e}")
-    
-    # Clean up temp scan
-    db.delete(temp_scan)
-    db.commit()
-    
+        
     return {"status": "saved", "count": len(saved), "deadlines": saved}
 
 @router.post("/{deadline_id}/assign-team/{team_id}", response_model=DeadlineResponse)
