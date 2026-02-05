@@ -342,6 +342,7 @@ async def scan_document(
             }
             for d in extracted_deadlines
         ]
+        logger.info(f"Deadlines to be saved in Redis (temp_id will be generated): {deadline_dicts}")
         temp_id = str(uuid.uuid4())
         redis_client.setex(f"scanned:{temp_id}", 3600, json.dumps(deadline_dicts))  # 1 hour expiry
         logger.info(f"Scan successful. temp_id={temp_id}, deadlines_found={len(deadline_dicts)}")
@@ -473,3 +474,17 @@ async def get_team_deadlines(
     ).all()
     
     return deadlines
+
+@router.get("/test-redis")
+async def test_redis():
+    import redis
+    import os
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB = int(os.getenv("REDIS_DB", 0))
+    try:
+        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, socket_connect_timeout=5)
+        r.ping()
+        return {"status": "success", "message": "Connected to Redis!"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
