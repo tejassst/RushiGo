@@ -349,9 +349,9 @@ export function UploadSection() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Extracted Deadlines</h3>
                 <div className="grid gap-4">
-                  {scanResults.map((deadline, index) => (
+                  {scanResults.map((deadline) => (
                     <div
-                      key={index}
+                      key={deadline._tempKey}
                       className="border rounded-lg p-4 bg-white shadow-sm"
                     >
                       <div className="flex justify-between items-start">
