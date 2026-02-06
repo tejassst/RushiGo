@@ -37,12 +37,19 @@ SCOPES = [
 @router.get("/debug-env")
 async def debug_environment():
     """Debug endpoint to check environment variables (remove after testing)"""
+    backend_url = (settings.BACKEND_URL or os.getenv('BACKEND_URL', 'NOT_SET')).rstrip('/')
+    redirect_uri = f"{backend_url}{settings.API_PREFIX}/calendar/callback"
+    
     return {
         "has_client_id": bool(settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID')),
         "has_client_secret": bool(settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET')),
-        "backend_url": settings.BACKEND_URL or os.getenv('BACKEND_URL', 'NOT_SET'),
+        "backend_url_raw": settings.BACKEND_URL or os.getenv('BACKEND_URL', 'NOT_SET'),
+        "backend_url_cleaned": backend_url,
+        "api_prefix": settings.API_PREFIX,
+        "redirect_uri": redirect_uri,
         "frontend_url": settings.FRONTEND_URL or os.getenv('FRONTEND_URL', 'NOT_SET'),
-        "client_id_prefix": (settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID', ''))[:20] if settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID') else 'NOT_SET'
+        "client_id_prefix": (settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID', ''))[:20] if settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID') else 'NOT_SET',
+        "instruction": f"Add this EXACT URI to Google Cloud Console: {redirect_uri}"
     }
 
 
@@ -88,7 +95,7 @@ async def initiate_calendar_oauth(
         # Build client config from environment variables
         client_id = settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID')
         client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET')
-        backend_url = settings.BACKEND_URL or os.getenv('BACKEND_URL', 'http://localhost:8000')
+        backend_url = (settings.BACKEND_URL or os.getenv('BACKEND_URL', 'http://localhost:8000')).rstrip('/')
         
         if not client_id or not client_secret:
             logger.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET")
@@ -97,13 +104,17 @@ async def initiate_calendar_oauth(
                 detail="Server configuration error: Missing Google OAuth credentials"
             )
         
+        # Build redirect URI
+        redirect_uri = f"{backend_url}{settings.API_PREFIX}/calendar/callback"
+        logger.info(f"Using redirect_uri: {redirect_uri}")
+        
         client_config = {
             "web": {
                 "client_id": client_id,
                 "client_secret": client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [f"{backend_url}{settings.API_PREFIX}/calendar/callback"]
+                "redirect_uris": [redirect_uri]
             }
         }
         
@@ -111,7 +122,7 @@ async def initiate_calendar_oauth(
         flow = Flow.from_client_config(
             client_config,
             scopes=SCOPES,
-            redirect_uri=f"{backend_url}{settings.API_PREFIX}/calendar/callback"
+            redirect_uri=redirect_uri
         )
         
         # Generate authorization URL with user ID in state
@@ -189,6 +200,7 @@ async def calendar_oauth_callback(
         # Build client config from environment variables
         client_id = settings.GOOGLE_CLIENT_ID or os.getenv('GOOGLE_CLIENT_ID')
         client_secret = settings.GOOGLE_CLIENT_SECRET or os.getenv('GOOGLE_CLIENT_SECRET')
+        backend_url = (settings.BACKEND_URL or os.getenv('BACKEND_URL', 'http://localhost:8000')).rstrip('/')
         
         if not client_id or not client_secret:
             logger.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET")
@@ -197,13 +209,17 @@ async def calendar_oauth_callback(
                 status_code=status.HTTP_302_FOUND
             )
         
+        # Build redirect URI
+        redirect_uri = f"{backend_url}{settings.API_PREFIX}/calendar/callback"
+        logger.info(f"OAuth callback using redirect_uri: {redirect_uri}")
+        
         client_config = {
             "web": {
                 "client_id": client_id,
                 "client_secret": client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"]
+                "redirect_uris": [redirect_uri]
             }
         }
         
@@ -211,7 +227,7 @@ async def calendar_oauth_callback(
         flow = Flow.from_client_config(
             client_config,
             scopes=SCOPES,
-            redirect_uri=f"{settings.BACKEND_URL}{settings.API_PREFIX}/calendar/callback"
+            redirect_uri=redirect_uri
         )
         
         logger.info(f"Exchanging OAuth code for tokens, user_id: {user_id}")
