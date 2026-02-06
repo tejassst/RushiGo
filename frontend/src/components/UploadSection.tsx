@@ -17,6 +17,14 @@ import { apiClient } from "../services/api";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
+type Deadline = {
+  title: string;
+  description: string;
+  date: string;
+  priority: string;
+  [key: string]: any; // for any extra fields
+};
+
 export function UploadSection() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -29,7 +37,7 @@ export function UploadSection() {
 
   const { createDeadline, error } = useDeadlines();
 
-  const saveDeadline = async (deadline: any, index: number) => {
+  const saveDeadline = async (deadline: any) => {
     if (!scanTempId) {
       toast({
         title: "Error",
@@ -47,7 +55,7 @@ export function UploadSection() {
         },
         body: JSON.stringify({
           temp_id: scanTempId,
-          selected_indexes: [index],
+          selected_keys: [deadline._tempKey], // send the key, not the index
         }),
       });
       if (!response.ok) {
@@ -58,8 +66,10 @@ export function UploadSection() {
         title: "Deadline Saved! ✅",
         description: `"${deadline.title}" has been added to your deadlines."`,
       });
-      // Remove the saved deadline from scan results
-      setScanResults((prev) => prev.filter((_, i) => i !== index));
+      // Remove the saved deadline from scan results by key
+      setScanResults((prev) =>
+        prev.filter((d) => d._tempKey !== deadline._tempKey)
+      );
     } catch (err) {
       toast({
         title: "Save Failed ❌",
@@ -139,8 +149,15 @@ export function UploadSection() {
       }
 
       const data = await response.json();
-      // data: { temp_id, deadlines }
-      setScanResults(data.deadlines || []);
+      const deadlinesWithKeys = (data.deadlines || []).map(
+        (d: Deadline, i: number) => ({
+          ...d,
+          _tempKey: crypto.randomUUID
+            ? crypto.randomUUID()
+            : `${i}_${Date.now()}`,
+        })
+      );
+      setScanResults(deadlinesWithKeys);
       setScanTempId(data.temp_id || null);
       setScanComplete(true);
 
@@ -363,8 +380,7 @@ export function UploadSection() {
                         <Button
                           size="sm"
                           onClick={() => {
-                            console.log("Saving deadline:", scanTempId, index);
-                            saveDeadline(deadline, index);
+                            saveDeadline(deadline);
                           }}
                           className="ml-4"
                         >

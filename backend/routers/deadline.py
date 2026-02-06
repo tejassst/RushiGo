@@ -7,6 +7,7 @@ import logging
 import uuid
 import json
 from pydantic import BaseModel
+from typing import List
 
 from db.database import get_db
 from models.deadline import Deadline
@@ -366,7 +367,7 @@ async def scan_document(
 # --- Save selected scanned deadlines from Redis ---
 class SaveScannedRequest(BaseModel):
     temp_id: str
-    selected_indexes: List[int]
+    selected_keys: List[str]
 
 @router.post("/save-scanned")
 async def save_scanned(
@@ -374,26 +375,23 @@ async def save_scanned(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Save selected deadlines (by index) from a previously scanned document (stored in database).
-    """
     temp_id = request.temp_id
-    selected_indexes = request.selected_indexes
-    
-    # Retrieve from database instead of Redis
+    selected_keys = request.selected_keys
+
     temp_scan = db.query(TempScan).filter(
         TempScan.temp_id == temp_id,
         TempScan.user_id == current_user.id,
         TempScan.expires_at > datetime.utcnow()
     ).first()
-    
+
     if not temp_scan:
         raise HTTPException(status_code=404, detail="Session expired or not found")
-    
+
     all_deadlines = json.loads(temp_scan.deadlines_json)
-    to_save = [all_deadlines[i] for i in selected_indexes if i < len(all_deadlines)]
+    # Find deadlines by _tempKey
+    to_save = [d for d in all_deadlines if d.get("_tempKey") in selected_keys]
     saved = []
-    
+
     for d in to_save:
         try:
             new_deadline = Deadline(
@@ -412,7 +410,7 @@ async def save_scanned(
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to save deadline: {e}")
-        
+
     return {"status": "saved", "count": len(saved), "deadlines": saved}
 
 @router.post("/{deadline_id}/assign-team/{team_id}", response_model=DeadlineResponse)
