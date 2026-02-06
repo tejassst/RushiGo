@@ -338,6 +338,7 @@ async def scan_document(
                 "date": d.date.isoformat() if hasattr(d.date, 'isoformat') else str(d.date),
                 "priority": d.priority,
                 "estimated_hours": getattr(d, "estimated_hours", 0),
+                "_tempKey": str(uuid.uuid4()),  # Add this line!
             }
             for d in extracted_deadlines
         ]

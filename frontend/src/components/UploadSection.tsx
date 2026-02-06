@@ -149,14 +149,7 @@ export function UploadSection() {
       }
 
       const data = await response.json();
-      const deadlinesWithKeys = (data.deadlines || []).map(
-        (d: Deadline, i: number) => ({
-          ...d,
-          _tempKey: crypto.randomUUID
-            ? crypto.randomUUID()
-            : `${i}_${Date.now()}`,
-        })
-      );
+      const deadlinesWithKeys = data.deadlines || [];
       setScanResults(deadlinesWithKeys);
       setScanTempId(data.temp_id || null);
       setScanComplete(true);
