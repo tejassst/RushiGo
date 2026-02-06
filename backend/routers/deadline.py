@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response, status, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -269,7 +269,6 @@ async def delete_deadline(
         )
 
 
-# --- Redis-backed scan-document endpoint ---
 @router.post("/scan-document")
 async def scan_document(
     file: UploadFile = File(...),
@@ -339,16 +338,16 @@ async def scan_document(
             }
             for d in extracted_deadlines
         ]
-        logger.info(f"Deadlines to be saved in Redis (temp_id will be generated): {deadline_dicts}")
+        logger.info(f"Extracted deadlines with temp keys: {deadline_dicts}")
         # Generate temp_id
         temp_id = str(uuid.uuid4())
         
-        # Store in database instead of Redis
+        # Store in database with temporary session
         temp_scan = TempScan(
             temp_id=temp_id,
             user_id=current_user.id,
             deadlines_json=json.dumps(deadline_dicts),
-            expires_at=datetime.utcnow() + timedelta(hours=1)  # 1 hour expiry
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)  # 1 hour expiry
         )
         db.add(temp_scan)
         db.commit()
@@ -362,7 +361,6 @@ async def scan_document(
             detail=f"Error processing document: {str(e)}"
         )
 
-# --- Save selected scanned deadlines from Redis ---
 class SaveScannedRequest(BaseModel):
     temp_id: str
     selected_keys: List[str]
@@ -381,7 +379,7 @@ async def save_scanned(
     temp_scan = db.query(TempScan).filter(
         TempScan.temp_id == temp_id,
         TempScan.user_id == current_user.id,
-        TempScan.expires_at > datetime.utcnow()
+        TempScan.expires_at > datetime.now(timezone.utc)
     ).first()
 
     if not temp_scan:

@@ -3,7 +3,7 @@ Background task schedulers for deadline notifications and temp scan cleanup
 """
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import threading
 
@@ -102,7 +102,7 @@ def cleanup_expired_scans():
     from models.temp_scan import TempScan
     db = SessionLocal()
     try:
-        expired = db.query(TempScan).filter(TempScan.expires_at < datetime.utcnow()).all()
+        expired = db.query(TempScan).filter(TempScan.expires_at < datetime.now(timezone.utc)).all()
         count = len(expired)
         for scan in expired:
             db.delete(scan)

@@ -3,7 +3,7 @@ Google Calendar API Service for syncing deadlines
 """
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
@@ -33,8 +33,8 @@ class CalendarService:
             credentials_path: Path to OAuth2 credentials file
             token_path: Path where to store/load the authentication token
         """
-        self.credentials_path = Path(credentials_path.strip())
-        self.token_path = Path(token_path.strip())
+        self.credentials_path: Optional[Path] = Path(credentials_path.strip())
+        self.token_path: Optional[Path] = Path(token_path.strip())
         self.service: Any = None  # Will be set in _authenticate
         self._authenticate()
     
@@ -75,7 +75,7 @@ class CalendarService:
         else:
             # Local development: use file-based authentication
             # Load token if it exists
-            if self.token_path.exists():
+            if self.token_path and self.token_path.exists():
                 try:
                     creds = Credentials.from_authorized_user_file(str(self.token_path), SCOPES)
                 except Exception as e:
@@ -88,18 +88,19 @@ class CalendarService:
                     try:
                         creds.refresh(Request())
                         logger.info("Refreshed Calendar credentials")
-                        try:
-                            with open(self.token_path, 'w') as token:
-                                token.write(creds.to_json())
-                            logger.info("Saved refreshed token")
-                        except (OSError, IOError) as e:
-                            logger.warning(f"Could not save refreshed token: {e}")
+                        if self.token_path:
+                            try:
+                                with open(self.token_path, 'w') as token:
+                                    token.write(creds.to_json())
+                                logger.info("Saved refreshed token")
+                            except (OSError, IOError) as e:
+                                logger.warning(f"Could not save refreshed token: {e}")
                     except Exception as e:
                         logger.error(f"Failed to refresh credentials: {e}")
                         raise RuntimeError(f"Calendar token expired and refresh failed: {e}")
                 
                 if not creds or not creds.valid:
-                    if not self.credentials_path.exists():
+                    if not self.credentials_path or not self.credentials_path.exists():
                         raise FileNotFoundError(
                             f"Calendar credentials file not found at {self.credentials_path}. "
                             "Please use the same credentials.json from Gmail setup."
@@ -113,9 +114,10 @@ class CalendarService:
                         creds = flow.run_local_server(port=0)
                         
                         # Save the credentials for next run
-                        with open(self.token_path, 'w') as token:
-                            token.write(creds.to_json())
-                        logger.info("Created new Calendar token")
+                        if self.token_path:
+                            with open(self.token_path, 'w') as token:
+                                token.write(creds.to_json())
+                            logger.info("Created new Calendar token")
                     except Exception as e:
                         logger.error(f"Authentication failed: {e}")
                         raise
@@ -336,9 +338,9 @@ class CalendarService:
         """
         try:
             if not time_min:
-                time_min = datetime.utcnow()
+                time_min = datetime.now(timezone.utc)
             if not time_max:
-                time_max = datetime.utcnow() + timedelta(days=365)
+                time_max = datetime.now(timezone.utc) + timedelta(days=365)
             
             events_result = self.service.events().list(
                 calendarId=calendar_id,

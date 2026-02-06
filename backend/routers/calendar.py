@@ -4,7 +4,7 @@ Calendar API routes
 import os
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -469,7 +469,7 @@ async def import_from_calendar(
         calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
         
         # Get upcoming events
-        time_min = datetime.utcnow()
+        time_min = datetime.now(timezone.utc)
         time_max = time_min + timedelta(days=days_ahead)
         
         events = calendar_service.get_upcoming_events(

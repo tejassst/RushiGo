@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from db.database import Base
-import datetime
+from datetime import datetime, timezone
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -10,6 +10,6 @@ class Notification(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     message = Column(String(1000))
     sent = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="notifications")
