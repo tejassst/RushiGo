@@ -47,6 +47,12 @@ export function UploadSection() {
       return;
     }
     try {
+      console.log("Saving deadline with data:", {
+        temp_id: scanTempId,
+        selected_keys: [deadline._tempKey],
+        deadline: deadline,
+      });
+
       const response = await fetch(`${API_BASE_URL}/deadlines/save-scanned`, {
         method: "POST",
         headers: {
@@ -55,25 +61,45 @@ export function UploadSection() {
         },
         body: JSON.stringify({
           temp_id: scanTempId,
-          selected_keys: [deadline._tempKey], // send the key, not the index
+          selected_keys: [deadline._tempKey], // send the key
         }),
       });
+
+      // Get response body first before checking status
+      const responseText = await response.text();
+      console.log("Response status:", response.status);
+      console.log("Response body:", responseText);
+
       if (!response.ok) {
-        throw new Error("Failed to save deadline");
+        let errorMessage = "Failed to save deadline";
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.detail || errorMessage;
+        } catch (e) {
+          errorMessage = responseText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
-      const result = await response.json();
+
+      const result = JSON.parse(responseText);
+      console.log("Save result:", result);
+
       toast({
         title: "Deadline Saved! ✅",
-        description: `"${deadline.title}" has been added to your deadlines."`,
+        description: `"${deadline.title}" has been added to your deadlines.`,
       });
       // Remove the saved deadline from scan results by key
       setScanResults((prev) =>
         prev.filter((d) => d._tempKey !== deadline._tempKey)
       );
     } catch (err) {
+      console.error("Error saving deadline:", err);
       toast({
         title: "Save Failed ❌",
-        description: "Failed to save deadline. Please try again.",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to save deadline. Please try again.",
         variant: "destructive",
       });
     }
@@ -150,6 +176,11 @@ export function UploadSection() {
 
       const data = await response.json();
       const deadlinesWithKeys = data.deadlines || [];
+
+      console.log("Scan response data:", data);
+      console.log("Deadlines with keys:", deadlinesWithKeys);
+      console.log("Temp ID:", data.temp_id);
+
       setScanResults(deadlinesWithKeys);
       setScanTempId(data.temp_id || null);
       setScanComplete(true);

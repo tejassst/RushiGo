@@ -24,9 +24,6 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# --- Redis Setup ---
-# Removed Redis client setup as per the code change suggestion
-
 # Initialize document processor with Gemini API key
 document_processor = DocumentProcessor(settings.GEMINI_API_KEY)
 
@@ -376,6 +373,8 @@ async def save_scanned(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    logger.info(f"Save scanned request - temp_id: {request.temp_id}, selected_keys: {request.selected_keys}, user_id: {current_user.id}")
+    
     temp_id = request.temp_id
     selected_keys = request.selected_keys
 
@@ -386,11 +385,16 @@ async def save_scanned(
     ).first()
 
     if not temp_scan:
+        logger.error(f"Temp scan not found or expired - temp_id: {temp_id}, user_id: {current_user.id}")
         raise HTTPException(status_code=404, detail="Session expired or not found")
 
     all_deadlines = json.loads(temp_scan.deadlines_json)
+    logger.info(f"All deadlines from temp_scan: {all_deadlines}")
+    
     # Find deadlines by _tempKey
     to_save = [d for d in all_deadlines if d.get("_tempKey") in selected_keys]
+    logger.info(f"Deadlines to save: {to_save}")
+    
     saved = []
 
     for d in to_save:
@@ -408,10 +412,12 @@ async def save_scanned(
             db.commit()
             db.refresh(new_deadline)
             saved.append({"id": new_deadline.id, **d})
+            logger.info(f"Successfully saved deadline: {new_deadline.id}")
         except Exception as e:
             db.rollback()
-            logger.error(f"Failed to save deadline: {e}")
+            logger.error(f"Failed to save deadline: {e}", exc_info=True)
 
+    logger.info(f"Save complete - saved {len(saved)} out of {len(to_save)} deadlines")
     return {"status": "saved", "count": len(saved), "deadlines": saved}
 
 @router.post("/{deadline_id}/assign-team/{team_id}", response_model=DeadlineResponse)
