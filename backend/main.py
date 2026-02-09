@@ -59,6 +59,21 @@ try:
             conn.commit()
             logger.info("Added calendar_id column to users table")
         
+        if 'calendar_token' not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN calendar_token TEXT"))
+            conn.commit()
+            logger.info("Added calendar_token column to users table")
+        
+        if 'calendar_refresh_token' not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN calendar_refresh_token VARCHAR(512)"))
+            conn.commit()
+            logger.info("Added calendar_refresh_token column to users table")
+        
+        if 'calendar_token_expiry' not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN calendar_token_expiry TIMESTAMP"))
+            conn.commit()
+            logger.info("Added calendar_token_expiry column to users table")
+        
         # Check and add Deadline table columns
         deadline_columns = [col['name'] for col in inspector.get_columns('deadlines')]
         

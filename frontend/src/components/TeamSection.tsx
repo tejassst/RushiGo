@@ -366,7 +366,7 @@ export function TeamSection() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 pb-1">
           Team Management
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
@@ -653,8 +653,8 @@ export function TeamSection() {
                               member.role === "admin"
                                 ? "destructive"
                                 : member.role === "member"
-                                ? "default"
-                                : "secondary"
+                                  ? "default"
+                                  : "secondary"
                             }
                             className="flex items-center space-x-1 ml-2"
                           >

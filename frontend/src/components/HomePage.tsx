@@ -29,6 +29,18 @@ export function HomePage({
         "Advanced AI automatically identifies and extracts deadlines from any document format.",
     },
     {
+      icon: CheckCircle,
+      title: "Calendar Sync",
+      description:
+        "Automatically sync deadlines to your Google Calendar for easy scheduling.",
+    },
+    {
+      icon: Star,
+      title: "GMail Notifications",
+      description:
+        "Receive notifications in your GMail inbox when deadlines are approaching.",
+    },
+    {
       icon: Shield,
       title: "Secure & Private",
       description:
@@ -61,7 +73,7 @@ export function HomePage({
           {/* Main heading */}
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
             Never Miss a
-            <span className="block bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent pb-2">
               Deadline Again
             </span>
           </h1>
