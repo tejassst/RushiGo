@@ -81,6 +81,7 @@ SQLALCHEMY_*.md
 TEST_*.md
 UPTIME_*.md
 USER_CHOICE_*.md
+DOCUMENT*.md
 
 # Backend docs (except README)
 backend/EMAIL_*.md
@@ -90,6 +91,7 @@ backend/SWITCH_*.md
 backend/TROUBLESHOOTING_*.md
 
 # Test scripts
+test_*.sh
 backend/scripts/test_*.py
 backend/scripts/debug_*.py
 backend/scripts/simple_*_test.py
