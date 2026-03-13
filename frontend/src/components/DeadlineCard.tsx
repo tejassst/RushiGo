@@ -121,7 +121,7 @@ export const DeadlineCard: React.FC<Props> = ({
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-2 pt-4 border-t border-gray-200">
+      <div className="flex gap-1 pt-4 border-t border-gray-200">
         {!deadline.completed && (
           <button
             onClick={() => onUpdate?.({ ...deadline, completed: true })}
@@ -151,7 +151,6 @@ export const DeadlineCard: React.FC<Props> = ({
           className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
         >
           <Trash2 className="h-4 w-4" />
-          Delete
         </button>
       </div>
     </div>
