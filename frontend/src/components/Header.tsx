@@ -18,9 +18,9 @@ import { CalendarSyncSettings } from "./CalendarSyncSettings";
 
 interface HeaderProps {
   onNavigate: (
-    section: "home" | "upload" | "recents" | "demo" | "team"
+    section: "home" | "scan" | "upload" | "recents" | "demo" | "team"
   ) => void;
-  activeSection: "home" | "upload" | "recents" | "demo" | "team";
+  activeSection: "home" | "scan" | "upload" | "recents" | "demo" | "team";
   onLogin: () => void;
   onSignUp: () => void;
   onLogout: () => void;
@@ -45,7 +45,7 @@ export function Header({
     ...(!isAuthenticated ? [{ key: "demo" as const, label: "Demo" }] : []),
     ...(isAuthenticated
       ? [
-          { key: "upload" as const, label: "Upload" },
+          { key: "scan" as const, label: "Scan" },
           { key: "recents" as const, label: "My Deadlines" },
           { key: "team" as const, label: "Team", icon: Users },
         ]
@@ -70,9 +70,6 @@ export function Header({
                 <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                   RushiGo
                 </span>
-                <p className="text-xs text-gray-500 -mt-1">
-                  AI Deadline Tracker
-                </p>
               </div>
             </div>
           </div>

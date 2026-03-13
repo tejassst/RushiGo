@@ -446,13 +446,13 @@ export function RecentsSection() {
       </div>
 
       {/* Deadlines Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-12">
+      <div className="flex flex-wrap justify-center gap-8 gap-y-12 mb-12">
         {filteredDeadlines.map((transformedDeadline) => {
           const originalDeadline = deadlines.find(
             (d) => d.id === transformedDeadline.id
           );
           return originalDeadline ? (
-            <div key={transformedDeadline.id} className="flex justify-center">
+            <div key={transformedDeadline.id}>
               <DeadlineCard
                 deadline={originalDeadline}
                 onUpdate={handleUpdate}

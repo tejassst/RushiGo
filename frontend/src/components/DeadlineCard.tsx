@@ -56,7 +56,7 @@ export const DeadlineCard: React.FC<Props> = ({
 
   return (
     <div
-      className={`max-w-md bg-white rounded-xl shadow-md border-l-4 p-6 mb-4 hover:shadow-lg transition-shadow ${getPriorityColor()} ${
+      className={`max-w-md bg-white rounded-xl shadow-md border-l-4 p-6 hover:shadow-lg transition-shadow ${getPriorityColor()} ${
         deadline.completed ? "opacity-60" : ""
       }`}
     >

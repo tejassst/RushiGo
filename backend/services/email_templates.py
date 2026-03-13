@@ -37,7 +37,7 @@ To manage your notifications, log into your RushiGo account.
         """.strip()
 
     @staticmethod
-    def deadline_approaching_html(user_name: str, deadline_title: str, deadline_date: datetime, days_left: int, course: Optional[str] = None) -> str:
+    def deadline_approaching_html(user_name: str, deadline_title: str, deadline_date: datetime, days_left: int, course: Optional[str] = None, deadline_id: Optional[int] = None) -> str:
         """HTML template for deadline approaching notification"""
         course_text = f" for <strong>{course}</strong>" if course else ""
         
@@ -48,6 +48,12 @@ To manage your notifications, log into your RushiGo account.
             date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p %Z')
         else:
             date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p')
+        
+        delete_button = ""
+        if deadline_id:
+            delete_button = f"""
+            <a href="http://localhost:3000/deadlines?action=delete&id={deadline_id}" style="display: inline-block; background-color: #dc3545; color: white; padding: 10px 16px; text-decoration: none; border-radius: 5px; margin-left: 10px; font-size: 14px;">Delete Deadline</a>
+            """
         
         return f"""
 <!DOCTYPE html>
@@ -64,6 +70,7 @@ To manage your notifications, log into your RushiGo account.
         .days-left {{ color: {urgency_color}; font-size: 24px; font-weight: bold; }}
         .footer {{ background-color: #f8f9fa; padding: 20px; border-radius: 0 0 10px 10px; text-align: center; color: #6c757d; font-size: 12px; }}
         .btn {{ display: inline-block; background-color: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }}
+        .btn-container {{ margin-top: 20px; }}
     </style>
 </head>
 <body>
@@ -85,7 +92,10 @@ To manage your notifications, log into your RushiGo account.
             
             <p>Don't forget to complete your task on time! You've got this! 💪</p>
             
-            <a href="http://localhost:3000/deadlines" class="btn">View Your Deadlines</a>
+            <div class="btn-container">
+                <a href="http://localhost:3000/deadlines" class="btn">View Your Deadlines</a>
+                {delete_button}
+            </div>
         </div>
         
         <div class="footer">

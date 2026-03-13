@@ -18,15 +18,17 @@ from models.temp_scan import TempScan
 from schemas.deadline import DeadlineCreate, DeadlineResponse, DeadlineUpdate
 from auth.oauth2 import get_current_user
 from services.document_processor import DocumentProcessor
+from services.text_processor import TextProcessor
 from services.calendar_service import get_calendar_service
 from core.config import settings
-
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 # Initialize document processor with Gemini API key
 document_processor = DocumentProcessor(settings.GEMINI_API_KEY)
-
+class ScanTextRequest(BaseModel):
+    text: str
 router = APIRouter(
     prefix="/deadlines",
     tags=["deadlines"],
@@ -334,7 +336,7 @@ async def scan_document(
                 "date": d.date.isoformat() if hasattr(d.date, 'isoformat') else str(d.date),
                 "priority": d.priority,
                 "estimated_hours": getattr(d, "estimated_hours", 0),
-                "_tempKey": str(uuid.uuid4()),  # Add this line!
+                "_tempKey": str(uuid.uuid4()),
             }
             for d in extracted_deadlines
         ]
@@ -361,6 +363,69 @@ async def scan_document(
             detail=f"Error processing document: {str(e)}"
         )
 
+@router.post("/scan-text")
+async def scan_text(
+    request: ScanTextRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Scan text for deadlines, store them temporarily in database, and return a temp_id for later saving.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    text_processor = TextProcessor(settings.GEMINI_API_KEY)
+    try:
+        text_content = request.text.strip()
+    
+        if not text_content:
+            logger.error("No text content found in the document.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No deadlines found in the document"
+            )
+        
+        extracted_deadlines = await text_processor.extract_deadlines(text_content)
+        
+        if not extracted_deadlines:
+            logger.error(f"No deadlines found in document. Text: {text_content[:200]}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No deadlines found in document"
+            )
+        
+        deadline_dicts = [
+            {
+                "title": d.title,
+                "description": d.description,
+                "course": d.course,
+                "date": d.date.isoformat(),
+                "priority": d.priority,
+                "estimated_hours": getattr(d, "estimated_hours", 0),
+                "_tempKey": str(uuid.uuid4())
+            } 
+            for d in extracted_deadlines
+        ]
+        logger.info(f"Extracted deadlines with temp keys: {deadline_dicts}")
+        temp_id = str(uuid.uuid4())
+
+        temp_scan = TempScan(
+            temp_id=temp_id,
+            user_id=current_user.id,
+            deadlines_json=json.dumps(deadline_dicts),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
+        ) 
+        db.add(temp_scan)
+        db.commit()
+
+        logger.info(f"Scan successful. temp_id={temp_id}, deadlines_found={len(deadline_dicts)}")
+        return {"temp_id": temp_id, "deadlines": deadline_dicts}
+    except Exception as e:
+        logger.error(f"Error processing text: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error processing text: {str(e)}"
+        )
 class SaveScannedRequest(BaseModel):
     temp_id: str
     selected_keys: List[str]
@@ -386,7 +451,7 @@ async def save_scanned(
         logger.error(f"Temp scan not found or expired - temp_id: {temp_id}, user_id: {current_user.id}")
         raise HTTPException(status_code=404, detail="Session expired or not found")
 
-    all_deadlines = json.loads(temp_scan.deadlines_json)
+    all_deadlines = json.loads(str(temp_scan.deadlines_json))
     logger.info(f"All deadlines from temp_scan: {all_deadlines}")
     
     # Find deadlines by _tempKey

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 interface HomePageProps {
-  onNavigate: (section: "demo" | "upload") => void;
+  onNavigate: (section: "demo" | "scan" | "upload") => void;
   isAuthenticated?: boolean;
 }
 
@@ -80,8 +80,8 @@ export function HomePage({
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed">
-            Upload any document and let our AI instantly extract all deadlines,
-            dates, and important milestones.
+            Upload any document or type a deadline and let our AI instantly
+            extract all deadlines, dates, and important milestones.
           </p>
 
           {/* CTA Buttons */}
@@ -100,11 +100,11 @@ export function HomePage({
             <Button
               variant="outline"
               size="lg"
-              onClick={() => onNavigate("upload")}
+              onClick={() => onNavigate("scan")}
               className="text-lg px-8 py-4 rounded-xl border-2 hover:bg-purple-50 hover:border-purple-300 transition-all"
             >
-              <Upload className="mr-2 h-5 w-5" />
-              Upload Document
+              Create Deadlines
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -286,7 +286,7 @@ export function HomePage({
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => onNavigate("upload")}
+                onClick={() => onNavigate("scan")}
                 className="border-white text-white hover:bg-white/10 px-8 py-4 rounded-xl"
               >
                 Get Started Now

@@ -33,6 +33,7 @@ class NotificationService:
             # Safely extract values from SQLAlchemy objects
             user_name = getattr(user, 'username', None) or "User"
             user_email = getattr(user, 'email', None) or ""
+            deadline_id = getattr(deadline, 'id', None)
             deadline_title = getattr(deadline, 'title', None) or "Untitled"
             deadline_course = getattr(deadline, 'course', None) or "General"
             deadline_date = getattr(deadline, 'date', None) or now
@@ -42,6 +43,7 @@ class NotificationService:
             user_email = str(user_email)
             deadline_title = str(deadline_title)
             deadline_course = str(deadline_course)
+            deadline_id = int(deadline_id) if deadline_id else None
             
             if notification_type == "approaching":
                 # Use time_label if provided, otherwise calculate days left
@@ -66,7 +68,8 @@ class NotificationService:
                     deadline_title=deadline_title,
                     deadline_date=deadline_date,
                     days_left=(deadline_date - now).days,
-                    course=deadline_course
+                    course=deadline_course,
+                    deadline_id=deadline_id
                 )
                 
             elif notification_type == "overdue":
@@ -208,7 +211,7 @@ class NotificationService:
                         else:
                             stats["errors"] += 1
             
-            # Send overdue deadline notifications (only once per day)
+            # Send overdue deadline notifications (only once ever)
             for deadline in overdue_deadlines:
                 # User should be loaded due to joinedload, but double-check
                 if deadline.user is None:
@@ -218,14 +221,12 @@ class NotificationService:
                     logger.warning(f"User not found for deadline {deadline.id}")
                     continue
                 
-                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
                 deadline_title_str = str(getattr(deadline, 'title', '') or '')
                 
                 existing_overdue_notification = db.query(Notification).filter(
                     and_(
                         Notification.user_id == deadline.user_id,
                         Notification.message.contains(f"Overdue deadline notification sent for: {deadline_title_str}"),
-                        Notification.created_at >= today_start,
                         Notification.sent.is_(True)  # Proper SQLAlchemy boolean check
                     )
                 ).first()

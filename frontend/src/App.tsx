@@ -18,7 +18,7 @@ import "./App.css";
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState<
-    "home" | "upload" | "recents" | "demo" | "team"
+    "home" | "upload" | "scan" | "recents" | "demo" | "team"
   >("home");
   const [authModal, setAuthModal] = useState<{
     isOpen: boolean;
@@ -65,12 +65,15 @@ function AppContent() {
   }
 
   const handleNavigate = (
-    section: "home" | "upload" | "recents" | "demo" | "team"
+    section: "home" | "upload" | "scan" | "recents" | "demo" | "team"
   ) => {
     // Redirect to login if trying to access protected sections while not authenticated
     if (
       !isAuthenticated &&
-      (section === "recents" || section === "upload" || section === "team")
+      (section === "recents" ||
+        section === "upload" ||
+        section === "scan" ||
+        section === "team")
     ) {
       setAuthModal({ isOpen: true, mode: "login" });
       return;
@@ -122,7 +125,8 @@ function AppContent() {
           <DemoSection onNavigate={handleNavigate} />
         )}
 
-        {activeSection === "upload" && isAuthenticated && <UploadSection />}
+        {(activeSection === "upload" || activeSection === "scan") &&
+          isAuthenticated && <UploadSection />}
 
         {activeSection === "recents" && isAuthenticated && <RecentsSection />}
 
