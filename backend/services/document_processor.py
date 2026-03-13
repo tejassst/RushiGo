@@ -43,7 +43,7 @@ class DocumentProcessor:
         import logging
         logger = logging.getLogger(__name__)
         prompt = f"""
-        Analyze the following text and extract all deadlines and tasks (Make sure they are genuine deadlines or assignments).
+        Analyze the following text and extract all deadlines and the tasks (Make sure they are genuine deadlines or assignments).
         Extract all deadlines from the following document. For each deadline, return a JSON object with these fields:
         - title (string)
         - description (string)
