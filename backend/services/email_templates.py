@@ -138,6 +138,76 @@ You're receiving this because you have deadline notifications enabled.
         """.strip()
 
     @staticmethod
+    def deadline_overdue_html(user_name: str, deadline_title: str, deadline_date: datetime, days_overdue: int, course: Optional[str] = None, deadline_id: Optional[int] = None) -> str:
+        """HTML template for overdue deadline notification"""
+        course_text = f" for <strong>{course}</strong>" if course else ""
+        
+        # Format with timezone info if available
+        if deadline_date.tzinfo:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p %Z')
+        else:
+            date_str = deadline_date.strftime('%B %d, %Y at %I:%M %p')
+        
+        delete_button = ""
+        if deadline_id:
+            delete_button = f"""
+            <a href="http://localhost:3000/deadlines?action=delete&id={deadline_id}" style="display: inline-block; background-color: #dc3545; color: white; padding: 10px 16px; text-decoration: none; border-radius: 5px; margin-left: 10px; font-size: 14px;">Delete Deadline</a>
+            """
+        
+        return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Overdue Deadline Alert</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }}
+        .content {{ padding: 30px; }}
+        .deadline-card {{ background-color: #fff3cd; border-left: 4px solid #dc3545; padding: 20px; margin: 20px 0; border-radius: 0 5px 5px 0; }}
+        .days-overdue {{ color: #dc3545; font-size: 24px; font-weight: bold; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; border-radius: 0 0 10px 10px; text-align: center; color: #6c757d; font-size: 12px; }}
+        .btn {{ display: inline-block; background-color: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }}
+        .btn-container {{ margin-top: 20px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Overdue Deadline Alert</h1>
+            <p>Action needed: Your deadline has passed</p>
+        </div>
+        
+        <div class="content">
+            <h2>Hi {user_name}! 👋</h2>
+            <p>Your deadline{course_text} is now overdue. Please complete this task as soon as possible!</p>
+            
+            <div class="deadline-card">
+                <h3>📋 {deadline_title}</h3>
+                <p><strong>📅 Was Due:</strong> {date_str}</p>
+                <p><strong>⚠️ Overdue by:</strong> <span class="days-overdue">{days_overdue} day{'s' if days_overdue != 1 else ''}</span></p>
+            </div>
+            
+            <p>Complete this task as soon as possible to stay on track! 💪</p>
+            
+            <div class="btn-container">
+                <a href="http://localhost:3000/deadlines" class="btn">View Your Deadlines</a>
+                {delete_button}
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>You're receiving this because you have deadline notifications enabled.</p>
+            <p>To manage your notifications, log into your RushiGo account.</p>
+            <p>© 2025 RushiGo Team</p>
+        </div>
+    </div>
+</body>
+</html>
+        """.strip()
+
+    @staticmethod
     def daily_digest_text(user_name: str, upcoming_deadlines: list, overdue_deadlines: list) -> str:
         """Daily digest of all upcoming and overdue deadlines"""
         text = f"Hi {user_name},\n\nHere's your daily deadline digest:\n\n"

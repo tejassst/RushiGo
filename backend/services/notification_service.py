@@ -82,7 +82,14 @@ class NotificationService:
                     days_overdue=days_overdue,
                     course=deadline_course
                 )
-                html_body = None  # You can create an HTML version if needed
+                html_body = self.email_templates.deadline_overdue_html(
+                    user_name=user_name,
+                    deadline_title=deadline_title,
+                    deadline_date=deadline_date,
+                    days_overdue=days_overdue,
+                    course=deadline_course,
+                    deadline_id=deadline_id
+                )
             
             else:
                 logger.error(f"Unknown notification type: {notification_type}")
