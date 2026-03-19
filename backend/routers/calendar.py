@@ -322,23 +322,102 @@ async def enable_calendar_sync(
     """
     Enable Google Calendar sync for the user
     
-    This will sync all future deadlines to Google Calendar automatically.
+    This will:
+    1. Enable calendar sync for future deadlines
+    2. Automatically sync all existing deadlines to Google Calendar
     """
     try:
-        # Test calendar connection
-        calendar_service = get_calendar_service()
+        # Check if already enabled
+        was_enabled = getattr(current_user, 'calendar_sync_enabled', False)
+        
+        # Test calendar connection (if using user's OAuth tokens)
+        if getattr(current_user, 'calendar_token', None):
+            from services.calendar_service import get_calendar_service_for_user
+            try:
+                get_calendar_service_for_user(current_user)
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e)
+                )
+        else:
+            # Test with global calendar service
+            calendar_service = get_calendar_service()
         
         # Update user preferences
         setattr(current_user, 'calendar_sync_enabled', True)
         setattr(current_user, 'calendar_id', calendar_id)
         db.commit()
         
+        # If not previously enabled, sync all existing deadlines
+        synced_count = 0
+        errors = []
+        
+        if not was_enabled:
+            logger.info(f"Calendar sync just enabled for user {current_user.id}. Syncing existing deadlines...")
+            
+            try:
+                # Get calendar service for the user
+                from services.calendar_service import get_calendar_service_for_user
+                calendar_service = get_calendar_service_for_user(current_user)
+            except ValueError:
+                # Fall back to global service if user doesn't have OAuth tokens
+                calendar_service = get_calendar_service()
+            
+            # Get all unsynced deadlines for the user
+            unsynced_deadlines = db.query(Deadline).filter(
+                Deadline.user_id == current_user.id,
+                Deadline.calendar_synced == False,
+                Deadline.completed == False
+            ).all()
+            
+            for deadline in unsynced_deadlines:
+                try:
+                    # Create calendar event
+                    event = calendar_service.create_event(
+                        title=str(getattr(deadline, 'title')),
+                        description=str(getattr(deadline, 'description', '') or ''),
+                        start_datetime=getattr(deadline, 'date'),
+                        estimated_hours=getattr(deadline, 'estimated_hours', None),
+                        course=getattr(deadline, 'course', None),
+                        priority=str(getattr(deadline, 'priority')),
+                        calendar_id=str(calendar_id) if calendar_id else "primary"
+                    )
+                    
+                    # Update deadline with calendar event ID
+                    setattr(deadline, 'calendar_event_id', event.get('id'))
+                    setattr(deadline, 'calendar_synced', True)
+                    synced_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Failed to sync deadline {deadline.id}: {e}")
+                    errors.append({
+                        "deadline_id": deadline.id,
+                        "title": deadline.title,
+                        "error": str(e)
+                    })
+            
+            db.commit()
+            logger.info(f"Synced {synced_count} existing deadlines for user {current_user.id}")
+        
         logger.info(f"Enabled calendar sync for user {current_user.id}")
         
-        return {
+        response = {
             "message": "Calendar sync enabled successfully",
-            "calendar_id": calendar_id
+            "calendar_id": calendar_id,
         }
+        
+        # Add sync results if deadlines were synced
+        if not was_enabled:
+            response["synced_count"] = synced_count
+            response["message"] += f" and synced {synced_count} existing deadlines"
+            if errors:
+                response["sync_errors"] = errors
+        
+        return response
+        
+    except HTTPException:
+        raise
     except FileNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

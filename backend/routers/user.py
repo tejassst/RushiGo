@@ -141,26 +141,40 @@ async def update_calendar_preferences(
     This endpoint allows users to:
     - Enable or disable calendar sync
     - Change which calendar to sync to (default: "primary")
+    
+    When enabling calendar sync for the first time, all existing deadlines will be synced.
     """
     try:
+        # Track previous sync state
+        was_enabled = getattr(current_user, 'calendar_sync_enabled', False)
+        
         # If enabling calendar sync, verify calendar API access
-        current_sync_enabled = getattr(current_user, 'calendar_sync_enabled', False)
-        if preferences.calendar_sync_enabled is True and not current_sync_enabled:
-            try:
-                # Test calendar connection by initializing service
-                calendar_service = get_calendar_service()
-                logger.info(f"Calendar service initialized for user {current_user.id}")
-            except FileNotFoundError:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Google Calendar API is not set up. Please contact administrator to enable Calendar API in Google Cloud Console."
-                )
-            except Exception as e:
-                logger.error(f"Failed to initialize calendar service: {e}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to connect to Google Calendar: {str(e)}"
-                )
+        if preferences.calendar_sync_enabled is True and not was_enabled:
+            # Check if user has OAuth tokens (per-user calendar)
+            if getattr(current_user, 'calendar_token', None):
+                try:
+                    from services.calendar_service import get_calendar_service_for_user
+                    get_calendar_service_for_user(current_user)
+                except ValueError as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(e)
+                    )
+            else:
+                # Test with global calendar service
+                try:
+                    calendar_service = get_calendar_service()
+                except FileNotFoundError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Google Calendar API is not set up. Please contact administrator to enable Calendar API in Google Cloud Console."
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to initialize calendar service: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Failed to connect to Google Calendar: {str(e)}"
+                    )
         
         # Update preferences
         if preferences.calendar_sync_enabled is not None:
@@ -170,13 +184,83 @@ async def update_calendar_preferences(
             setattr(current_user, 'calendar_id', preferences.calendar_id)
         
         db.commit()
+        
+        # If enabling sync for the first time, sync all existing deadlines
+        synced_count = 0
+        errors = []
+        
+        if preferences.calendar_sync_enabled is True and not was_enabled:
+            logger.info(f"Calendar sync just enabled for user {current_user.id}. Syncing existing deadlines...")
+            
+            try:
+                # Get calendar service for the user
+                from services.calendar_service import get_calendar_service_for_user
+                try:
+                    calendar_service = get_calendar_service_for_user(current_user)
+                except ValueError:
+                    # Fall back to global service if user doesn't have OAuth tokens
+                    calendar_service = get_calendar_service()
+                
+                calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
+                
+                # Get all unsynced deadlines for the user
+                from models.deadline import Deadline
+                unsynced_deadlines = db.query(Deadline).filter(
+                    Deadline.user_id == current_user.id,
+                    Deadline.calendar_synced == False,
+                    Deadline.completed == False
+                ).all()
+                
+                for deadline in unsynced_deadlines:
+                    try:
+                        # Create calendar event
+                        event = calendar_service.create_event(
+                            title=str(getattr(deadline, 'title')),
+                            description=str(getattr(deadline, 'description', '') or ''),
+                            start_datetime=getattr(deadline, 'date'),
+                            estimated_hours=getattr(deadline, 'estimated_hours', None),
+                            course=getattr(deadline, 'course', None),
+                            priority=str(getattr(deadline, 'priority')),
+                            calendar_id=calendar_id
+                        )
+                        
+                        # Update deadline with calendar event ID
+                        setattr(deadline, 'calendar_event_id', event.get('id'))
+                        setattr(deadline, 'calendar_synced', True)
+                        synced_count += 1
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to sync deadline {deadline.id}: {e}")
+                        errors.append({
+                            "deadline_id": deadline.id,
+                            "title": deadline.title,
+                            "error": str(e)
+                        })
+                
+                db.commit()
+                logger.info(f"Synced {synced_count} existing deadlines for user {current_user.id}")
+                
+            except Exception as e:
+                logger.error(f"Failed to sync deadlines when enabling calendar: {e}")
+                # Don't fail the preference update, but log the error
+        
         db.refresh(current_user)
         
-        return {
+        response = {
             "message": "Calendar preferences updated successfully",
             "calendar_sync_enabled": current_user.calendar_sync_enabled,
             "calendar_id": current_user.calendar_id or "primary"
         }
+        
+        # Add sync results if deadlines were synced
+        if preferences.calendar_sync_enabled is True and not was_enabled:
+            response["synced_count"] = synced_count
+            if synced_count > 0:
+                response["message"] += f" - {synced_count} existing deadlines synced to calendar"
+            if errors:
+                response["sync_errors"] = errors
+        
+        return response
         
     except HTTPException:
         raise
