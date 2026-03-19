@@ -71,11 +71,14 @@ async def create_deadline(
         # Sync to Google Calendar if enabled
         if getattr(current_user, 'calendar_sync_enabled', False):
             try:
-                # Import the per-user calendar service function
-                from services.calendar_service import get_calendar_service_for_user
+                # Try to use user's OAuth tokens first
+                try:
+                    from services.calendar_service import get_calendar_service_for_user
+                    calendar_service = get_calendar_service_for_user(current_user)
+                except ValueError:
+                    # Fall back to global calendar service
+                    calendar_service = get_calendar_service()
                 
-                # Create calendar service with user's OAuth tokens
-                calendar_service = get_calendar_service_for_user(current_user)
                 calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
                 
                 event = calendar_service.create_event(
@@ -186,9 +189,14 @@ async def update_deadline(
             getattr(deadline, 'calendar_synced', False) and 
             getattr(deadline, 'calendar_event_id', None)):
             try:
-                from services.calendar_service import get_calendar_service_for_user
+                # Try to use user's OAuth tokens first
+                try:
+                    from services.calendar_service import get_calendar_service_for_user
+                    calendar_service = get_calendar_service_for_user(current_user)
+                except ValueError:
+                    # Fall back to global calendar service
+                    calendar_service = get_calendar_service()
                 
-                calendar_service = get_calendar_service_for_user(current_user)
                 calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
                 
                 calendar_service.update_event(
@@ -245,9 +253,14 @@ async def delete_deadline(
             getattr(deadline, 'calendar_synced', False) and 
             getattr(deadline, 'calendar_event_id', None)):
             try:
-                from services.calendar_service import get_calendar_service_for_user
+                # Try to use user's OAuth tokens first
+                try:
+                    from services.calendar_service import get_calendar_service_for_user
+                    calendar_service = get_calendar_service_for_user(current_user)
+                except ValueError:
+                    # Fall back to global calendar service
+                    calendar_service = get_calendar_service()
                 
-                calendar_service = get_calendar_service_for_user(current_user)
                 calendar_id = getattr(current_user, 'calendar_id', None) or "primary"
                 calendar_service.delete_event(
                     event_id=str(getattr(deadline, 'calendar_event_id')),

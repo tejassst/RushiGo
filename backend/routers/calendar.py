@@ -313,6 +313,84 @@ async def get_calendar_status(
     }
 
 
+@router.post("/refresh-token")
+async def refresh_calendar_token(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Refresh user's Google Calendar OAuth token if expired
+    
+    This is useful if your token has expired but you don't want to reconnect.
+    Simply call this endpoint and your token will be refreshed.
+    """
+    try:
+        if not getattr(current_user, 'calendar_refresh_token', None):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No refresh token found. Please reconnect your calendar."
+            )
+        
+        # Try to refresh the token
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+        
+        creds_info = {
+            "token": getattr(current_user, 'calendar_token', None),
+            "refresh_token": getattr(current_user, 'calendar_refresh_token', None),
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "scopes": SCOPES
+        }
+        
+        # If client credentials not in env, try to load from file
+        if not creds_info["client_id"] or not creds_info["client_secret"]:
+            try:
+                with open("credentials.json", "r") as f:
+                    client_config = json.load(f)
+                    creds_info["client_id"] = client_config["installed"]["client_id"]
+                    creds_info["client_secret"] = client_config["installed"]["client_secret"]
+            except Exception as e:
+                logger.error(f"Failed to load client credentials: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Google Calendar client credentials not configured"
+                )
+        
+        # Create credentials and refresh
+        creds = Credentials.from_authorized_user_info(creds_info, SCOPES)
+        
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            
+            # Update user's token in database
+            setattr(current_user, 'calendar_token', creds.token)
+            setattr(current_user, 'calendar_token_expiry', creds.expiry)
+            db.commit()
+            
+            logger.info(f"Refreshed calendar token for user {current_user.id}")
+            
+            return {
+                "message": "Calendar token refreshed successfully",
+                "token_expiry": creds.expiry.isoformat() if creds.expiry else None
+            }
+        else:
+            return {
+                "message": "Token is still valid, no refresh needed",
+                "token_expiry": creds.expiry.isoformat() if creds.expiry else None
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to refresh calendar token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to refresh token: {str(e)}"
+        )
+
+
 @router.post("/enable")
 async def enable_calendar_sync(
     calendar_id: Optional[str] = "primary",
