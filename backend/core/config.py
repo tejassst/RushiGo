@@ -42,6 +42,14 @@ class Settings(BaseSettings):
     @classmethod
     def parse_allowed_origins(cls, value) -> List[str]:
         if isinstance(value, str):
+            # Handle JSON array format: ["url1", "url2"]
+            if value.startswith('[') and value.endswith(']'):
+                import json
+                try:
+                    return json.loads(value)
+                except json.JSONDecodeError:
+                    pass
+            # Handle comma-separated format: url1,url2
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         elif isinstance(value, list):
             return value
